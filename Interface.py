@@ -71,7 +71,7 @@ def update_profil():
     revenu_value.configure(text=f"{joueur.calculer_revenu()} €")
     couts_fixes_value.configure(text=f"{joueur.calculer_couts_fixes()} €")
     solde_net_value.configure(text=f"{joueur.calculer_solde_net()} €")
-
+    
 # Mettre à jour les données du profil initialement
 update_profil()
 
