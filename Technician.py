@@ -30,15 +30,15 @@ class Technician:
 
 # Liste des techniciens disponibles
 technicians = [
-    Technician("Rémy Tourneur", "Mécanique", "Débutant", 100, 0.75, 'images/Tech7.png'),
+    Technician("Rémy Tourneur", "Mécanique", "Débutant", 100, 1.25, 'images/Tech7.png'),
     Technician("Jack Soudey", "Mécanique", "Moyen", 200, 1, 'images/Tech7.png'),
-    Technician("Claude Piston", "Mécanique", "Expert", 300, 1.5, 'images/Tech7.png'),
-    Technician("Hubert Volt", "Électrique", "Débutant", 150, 0.75, 'images/Tech7.png'),
+    Technician("Claude Piston", "Mécanique", "Expert", 300, 0.75, 'images/Tech7.png'),
+    Technician("Hubert Volt", "Électrique", "Débutant", 150, 1.25, 'images/Tech7.png'),
     Technician("Fred Fraiseuse", "Électrique", "Moyen", 250, 1, 'images/Tech7.png'),
-    Technician("Léon Laser", "Électrique", "Expert", 350, 1.5, 'images/Tech7.png'),
-    Technician("Alex Byte", "Informatique", "Débutant", 120, 0.75, 'images/Tech7.png'),
+    Technician("Léon Laser", "Électrique", "Expert", 350, 0.75, 'images/Tech7.png'),
+    Technician("Alex Byte", "Informatique", "Débutant", 120, 1.25, 'images/Tech7.png'),
     Technician("Lucas Pixel", "Informatique", "Moyen", 220, 1, 'images/Tech7.png'),
-    Technician("Dave Data", "Informatique", "Expert", 320, 1.5, 'images/Tech7.png')
+    Technician("Dave Data", "Informatique", "Expert", 320, 0.75, 'images/Tech7.png')
 ]
 
 # Dictionnaire pour garder une référence aux boutons d'engagement
@@ -94,4 +94,3 @@ def engager_technicien(technicien, joueur, argent_value, engaged_frame, engageme
             button.configure(state="disabled")  # Désactiver le bouton après engagement
     else:
         print("Nombre maximum de techniciens atteint ou technicien déjà engagé!")
-
