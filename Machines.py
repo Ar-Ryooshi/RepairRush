@@ -1,5 +1,7 @@
 import customtkinter as ctk
 from PIL import Image, ImageTk
+from Technician import Technician   # Importation de la classe
+
 
 # Classe Machine
 class Machine:
@@ -15,6 +17,8 @@ class Machine:
         self.etat = 100
         self.frame = None
         self.image = None  # Garder une référence de l'image
+        self.technicien = Technician()  # Création d'une instance
+
 
     def create_interface(self, root):
         """Crée l'interface visuelle pour chaque machine."""
@@ -36,7 +40,8 @@ class Machine:
         self.canvas.grid(row=0, column=1, padx=5)
 
         # Bouton de réparation
-        ctk.CTkButton(self.frame, text="Réparer", command=self.reparer).pack(pady=10)
+        ctk.CTkButton(self.frame, text="Réparer", command=self.reparer_temps).pack(pady=10)
+
 
         # Initialisation de la barre d'état
         self.update_barre()
@@ -64,14 +69,27 @@ class Machine:
 
     def get_color_for_etat(self):
         """Retourne la couleur appropriée en fonction de l'état actuel."""
-        return "green" if self.etat >= 60 else "yellow" if 20 <= self.etat < 60 else "red"
+        return "green" if self.etat >= 70 else "yellow" if 30 <= self.etat < 70 else "red"
     
 
     def reparer(self):
         """Répare la machine (remet l'état à 100%)."""
         self.etat = 100
         self.update_barre()
-    def reparer type_machine
+
+    def reparer_temps(self):
+        """Répare la machine après un certain temps."""
+        self.frame.after(self.temps_entretien*self.technicien.facteur_reparation, self.reparer)
+
+
+    def baisse_revenu(self):
+        # Simule la baisse de revenu de la machine en fonction de l'état
+        if self.etat >= 70:
+            return self.revenu_par_periode
+        if 30 <= self.etat < 70:
+            return self.revenu_par_periode * 0.7
+        if self.etat < 30:
+            return self.revenu_par_periode * 0.5
 
 # Classe InterfaceGraphique
 class InterfaceGraphique:
@@ -127,16 +145,16 @@ def acheter_machine(machine, joueur, argent_value, scrollable_frame, interface_m
         print("Pas assez d'argent pour acheter cette machine.")
 # Liste des machines disponibles à l'achat
 machines_disponibles = [
-    Machine("Tour", "Maître", "Méchanique", 25000, 6, 3500, 0.165, "images/TourNiveau2.png"),
-    Machine("CNC", "Artisan", "Électrique", 30000, 7, 4000, 0.135, "images/CNCNiveau1.png"),
-    Machine("CNC", "Virtuose", "Électrique", 35000, 9, 4500, 0.12, "images/CNCNiveau2.png"),
-    Machine("Bras Robot", "Rookie", "Informatique", 15000, 4, 2000, 0.1, "images/RobotNiveau1.png"),
-    Machine("Bras Robot", "Légendaire", "Informatique", 23000, 5, 2500, 0.084, "images/RobotNiv2.png")
+    Machine("Tour", "Maître", "Méchanique", 25000, 6000, 3500, 0.165, "images/TourNiveau2.png"),
+    Machine("CNC", "Artisan", "Électrique", 30000, 7000, 4000, 0.135, "images/CNCNiveau1.png"),
+    Machine("CNC", "Virtuose", "Électrique", 35000, 9000, 4500, 0.12, "images/CNCNiveau2.png"),
+    Machine("Bras Robot", "Rookie", "Informatique", 15000, 4000, 2000, 0.1, "images/RobotNiveau1.png"),
+    Machine("Bras Robot", "Légendaire", "Informatique", 23000, 5000, 2500, 0.084, "images/RobotNiv2.png")
 ]
 
 # Liste des machines possédées par le joueur au départ (une seule machine niveau 1)
 machines_possedees = [
-    Machine("Tour", "Apprentis", "Méchanique", 20000, 5, 3000, 0.21, "images/TourNiveau1.png")
+    Machine("Tour", "Apprentis", "Méchanique", 20000, 10, 3000, 0.21, "images/TourNiveau1.png")
 ]
 
 # Exemple d'utilisation dans un autre fichier
