@@ -19,7 +19,18 @@ class Machine:
         self.image = None  # Garder une référence de l'image
         self.technicien = Technician  # Création d'une instance
 
-
+    def assign_technician(self, technician):
+        """Assigne un technicien à cette machine."""
+        if self.technicien is not None:
+            print(f"Machine {self.nom} a déjà un technicien assigné.")
+            return False
+        if technician.assigned_machine is not None:
+            technician.assigned_machine.technicien = None
+        technician.assigned_machine = self
+        self.technicien = technician
+        print(f"{technician.nom} a été assigné à la machine {self.nom}.")
+        return True
+    
     def create_interface(self, root):
         """Crée l'interface visuelle pour chaque machine."""
         self.frame = ctk.CTkFrame(root, width=200, height=300, corner_radius=10)
@@ -45,18 +56,6 @@ class Machine:
 
         # Initialisation de la barre d'état
         self.update_barre()
-
-    def assign_technician(self, technician):
-        """Assigne un technicien à cette machine."""
-        if self.technicien is not None:
-            print(f"Machine {self.nom} a déjà un technicien assigné.")
-            return False
-        if technician.assigned_machine is not None:
-            technician.unassign_from_machine()
-        if technician.assign_to_machine(self):
-            self.technicien = technician
-            return True
-        return False
 
     def degrader_etat(self):
         """Dégrade l'état de la machine."""
