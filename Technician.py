@@ -118,7 +118,7 @@ def open_assign_window(technician, joueur):
     ctk.CTkLabel(assign_window, text=f"Attribuer {technician.nom} à une machine", font=("Arial", 14)).pack(pady=10)
 
     for machine in machines_possedees:
-        machine_button = ctk.CTkButton(assign_window, text=f"{machine.nom} ({machine.type_machine})", command=lambda m=machine: assign_technician_to_machine(technician, m, assign_window))
+        machine_button = ctk.CTkButton(assign_window, text=f"{machine.nom} ({machine.niveau_machine})", command=lambda m=machine: assign_technician_to_machine(technician, m, assign_window))
         machine_button.pack(pady=5)
 
 def assign_technician_to_machine(technician, machine, window):
