@@ -188,7 +188,7 @@ def afficher_machines():
 
         # Bouton pour acheter la machine
         buy_button = ctk.CTkButton(scrollable_frame, text=f"Acheter ({machine.cout_achat} {selected_currency})", width=150,
-                                    command=lambda mach=machine: acheter_machine(mach, joueur, argent_value, scrollable_frame, interface_machines))
+                                command=lambda mach=machine: acheter_machine(mach, joueur, argent_value, scrollable_frame, interface_machines))
         buy_button.grid(row=row_offset + j * 2 + 2, column=5, padx=10, pady=5)
  
 
