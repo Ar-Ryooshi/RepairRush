@@ -76,7 +76,7 @@ def update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons
 
         def licencier_technicien(tech=technician):
             if tech.licencier(joueur):
-                argent_label.configure(text=f"Argent : {joueur.argent} €")
+                argent_label.configure(text=f"{joueur.argent} €")
                 update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons)
                 # Réactiver le bouton d'engagement
                 engagement_buttons[tech].configure(state="normal")
@@ -85,13 +85,11 @@ def update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons
         fire_button.pack(pady=5)
 
 # Fonction pour engager un technicien
-def engager_technicien(technicien, joueur, argent_value, engaged_frame, engagement_buttons, button):
-    # Logique pour engager un technicien et mettre à jour l'interface
-    if len(joueur.techniciens_possedes) < 6 and technicien not in joueur.techniciens_possedes:  # Maximum de 6 techniciens et empêcher double engagement
-        if technicien.engager(joueur):
-            argent_value.configure(text=f"Argent : {joueur.argent} €")
-            update_engaged_frame(engaged_frame, joueur, argent_value, engagement_buttons)  # Mettre à jour la frame des techniciens engagés
-            button.configure(state="disabled")  # Désactiver le bouton après engagement
-    else:
-        print("Nombre maximum de techniciens atteint ou technicien déjà engagé!")
+def engager_technicien(technicien, joueur, engaged_frame, argent_label, engagement_buttons, button):
+    if len(joueur.techniciens_possedes) < 6 and technicien not in joueur.techniciens_possedes:
+        if technicien.engager(joueur):  # Cette méthode modifie `argent` du joueur
+            joueur.trigger_ui_update()  # Met automatiquement à jour l'interface
+            update_engaged_frame(engaged_frame, joueur, engagement_buttons)
+            button.configure(state="disabled")
+
 

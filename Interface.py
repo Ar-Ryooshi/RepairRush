@@ -2,13 +2,13 @@ import customtkinter as ctk
 from customtkinter import CTk
 import time
 from PIL import Image, ImageTk
-from Machines import Machine, machines_disponibles,machines_possedees, InterfaceGraphique, acheter_machine
-from Technician import technicians, engagement_buttons, update_engaged_frame, engager_technicien
+from modules.Machines import Machine, machines_disponibles,machines_possedees, InterfaceGraphique, acheter_machine
+from modules.Technician import technicians, engagement_buttons, update_engaged_frame, engager_technicien
 
 
 # from sound_manager import SoundManager
-from joueur_class import Joueur
-from interface_label import creer_labels_profil
+from modules.joueur_class import Joueur, creer_labels_profil
+
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -58,25 +58,17 @@ engaged_frame.place(x=10, y=500)
 
 # Créer les labels du profil et récupérer les références nécessaires
 labels_profil = creer_labels_profil(menu_principal_frame, joueur)
-argent_value = labels_profil["argent_value"]
-jour_value = labels_profil["jour_value"]
-revenu_value = labels_profil["revenu_value"]
-couts_fixes_value = labels_profil["couts_fixes_value"]
-solde_net_value = labels_profil["solde_net_value"]
+joueur.trigger_ui_update()
+
 
 # Fonction pour mettre à jour le profil
-def update_profil():
-    argent_value.configure(text=f"{joueur.argent} €")
-    jour_value.configure(text=f"{joueur.jour_actuel}")
-    revenu_value.configure(text=f"{joueur.calculer_revenu()} €")
-    couts_fixes_value.configure(text=f"{joueur.calculer_couts_fixes()} €")
-    solde_net_value.configure(text=f"{joueur.calculer_solde_net()} €")
+
 
 # Mettre à jour les données du profil initialement
-update_profil()
+
 
 # Mettre à jour les données du profil initialement
-update_profil()
+
 
 progress_bar = ctk.CTkProgressBar(menu_principal_frame, width=600, height=30, progress_color='green')
 progress_bar.place(x=10, y=350)
@@ -90,11 +82,8 @@ def update_progress_bar(i=0):
     else:
         progress_bar.set(0)
         root.after(10, update_progress_bar, 0)
-        argent_value.configure(text=f"{joueur.argent} €")  # Mettre à jour l'affichage de l'argent
-        joueur.incrementer_jour()  # Incrémenter le jour
-        joueur.ajouter_revenu()  # Ajouter le revenu des machines
-        jour_value.configure(text=f"{joueur.jour_actuel}")
-        update_profil()  # Mettre à jour l'affichage du jour
+        joueur.incrementer_jour()  # Automatiquement met à jour l'interface
+        joueur.ajouter_revenu()
         # sound_manager.play_effect("sounds/ca-ching.mp3")  # Jouer le son de gain d'argent
 
 def start_progress():
@@ -187,8 +176,9 @@ def afficher_machines():
         revenu_label.grid(row=row_offset + j * 2 + 2, column=4, padx=10, pady=5, sticky="nsew")
 
         # Bouton pour acheter la machine
+        
         buy_button = ctk.CTkButton(scrollable_frame, text=f"Acheter ({machine.cout_achat} {selected_currency})", width=150,
-                                    command=lambda mach=machine: acheter_machine(mach, joueur, argent_value, scrollable_frame, interface_machines))
+                                    command=lambda mach=machine: acheter_machine(mach, joueur, interface_machines))
         buy_button.grid(row=row_offset + j * 2 + 2, column=5, padx=10, pady=5)
  
 
@@ -248,7 +238,8 @@ def afficher_techniciens():
             hire_button.configure(state="disabled")
 
         # Fonction pour engager le technicien
-        hire_button.configure(command=lambda t=technician, b=hire_button: engager_technicien(t, joueur, argent_value, engaged_frame, engagement_buttons, b))
+        # Interface.py (ou le fichier où vous configurez les boutons)
+        hire_button.configure(command=lambda t=technician, b=hire_button: engager_technicien(t, joueur, engaged_frame, labels_profil, engagement_buttons, b))
         hire_button.grid(row=i * 2 + 2, column=5, padx=10, pady=5)
 
 

@@ -1,6 +1,5 @@
 import customtkinter as ctk
 from PIL import Image, ImageTk
-
 # Classe Machine
 class Machine:
     def __init__(self, nom, niveau_machine, type_machine, cout_achat, temps_entretien, revenu_par_periode, deplet_rate, image_path):
@@ -66,12 +65,20 @@ class Machine:
         """Retourne la couleur appropriée en fonction de l'état actuel."""
         return "green" if self.etat >= 60 else "yellow" if 20 <= self.etat < 60 else "red"
     
-
+    def calculer_revenu_actuel(self):
+        """Calcule le revenu actuel en fonction de l'état de la machine."""
+        if self.etat >= 60:
+            return self.revenu_par_periode
+        elif 20 <= self.etat < 60:
+            return int(self.revenu_par_periode * 0.5)
+        else:
+            return 0
+        
     def reparer(self):
         """Répare la machine (remet l'état à 100%)."""
         self.etat = 100
         self.update_barre()
-    def reparer type_machine
+    
 
 # Classe InterfaceGraphique
 class InterfaceGraphique:
@@ -107,24 +114,18 @@ class InterfaceGraphique:
         for machine in self.machines:
             machine.degrader_etat_progressivement()
             
-def acheter_machine(machine, joueur, argent_value, scrollable_frame, interface_machines):
+def acheter_machine(machine, joueur, interface_machines):
     """Permet d'acheter une machine si le joueur a suffisamment d'argent."""
-    if machine in machines_disponibles and joueur.argent >= machine.cout_achat:
-        joueur.argent -= machine.cout_achat
-
-        # Ajouter la machine à la liste des machines possédées et la retirer des disponibles
-        machines_possedees.append(machine)
-        machines_disponibles.remove(machine)
-
-        # Mise à jour de l'affichage de l'argent du joueur
-        argent_value.configure(text=f"Argent : {joueur.argent} €")
-
-        # Mise à jour de l'interface des machines possédées et disponibles
+    if joueur.acheter_machine(machine):  # Directement géré par le setter
         interface_machines.update_interface(machines_possedees)
-
         print(f"Machine {machine.nom} achetée.")
     else:
         print("Pas assez d'argent pour acheter cette machine.")
+
+
+    
+
+# Exemple d'utilisatio
 # Liste des machines disponibles à l'achat
 machines_disponibles = [
     Machine("Tour", "Maître", "Méchanique", 25000, 6, 3500, 0.165, "images/TourNiveau2.png"),
