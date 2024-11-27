@@ -10,6 +10,17 @@ class Technician:
         self.salaire = salaire
         self.facteur_reparation = facteur_reparation
         self.image_path = image_path
+    
+    def assign_to_machine(self, machine):
+        if self.assigned_machine is not None:
+            print(f"{self.nom} est déjà assigné à une machine.")
+            return False
+        self.assigned_machine = machine
+        machine.technicien = self
+        print(f"{self.nom} a été assigné à la machine {machine.nom}.")
+        return True
+
+
 
     def engager(self, joueur):
         if joueur.argent >= self.salaire:
