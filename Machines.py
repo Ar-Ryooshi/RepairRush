@@ -17,7 +17,7 @@ class Machine:
         self.etat = 100
         self.frame = None
         self.image = None  # Garder une référence de l'image
-        self.technicien = Technician  # Création d'une instance
+        self.technicien = None  # Initialisation à None
 
     def assign_technician(self, technician):
         """Assigne un technicien à cette machine."""
@@ -53,7 +53,6 @@ class Machine:
         # Bouton de réparation
         ctk.CTkButton(self.frame, text="Réparer", command=self.reparer_temps).pack(pady=10)
 
-
         # Initialisation de la barre d'état
         self.update_barre()
 
@@ -82,7 +81,6 @@ class Machine:
         """Retourne la couleur appropriée en fonction de l'état actuel."""
         return "green" if self.etat >= 70 else "yellow" if 30 <= self.etat < 70 else "red"
     
-
     def reparer(self):
         """Répare la machine (remet l'état à 100%)."""
         self.etat = 100
@@ -90,33 +88,40 @@ class Machine:
 
     def reparer_temps(self):
         """Répare la machine après un certain temps."""
-        self.frame.after(self.temps_entretien*self.technicien.facteur_reparation, self.reparer)
+        if self.technicien is not None:
+            self.frame.after(int(self.temps_entretien * self.technicien.facteur_reparation), self.reparer)
+        else:
+            print("Aucun technicien assigné à cette machine.")
     
     def en_reparation(self):
         """Suspend les revenus pendant la réparation de la machine."""
         if not hasattr(self, 'en_reparation_flag'):
             self.en_reparation_flag = False  # Ajoute un indicateur de réparation à l'instance
 
-    # Si déjà en réparation, ne rien faire
+        # Si déjà en réparation, ne rien faire
         if self.en_reparation_flag:
             return
 
         self.en_reparation_flag = True  # Drapeau pour indiquer que la machine est en réparation
 
-    # Arrêter les revenus
+        # Arrêter les revenus
         revenus_avant_reparation = self.revenu_par_periode
         self.revenu_par_periode = 0
 
-    # Lancer la réparation
-        self.frame.after(self.temps_entretien * self.technicien.facteur_reparation, self.finir_reparation, revenus_avant_reparation)
+        # Lancer la réparation
+        if self.technicien is not None:
+            self.frame.after(self.temps_entretien * self.technicien.facteur_reparation, self.finir_reparation, revenus_avant_reparation)
+        else:
+            print("Aucun technicien assigné à cette machine.")
 
     def finir_reparation(self, revenus_avant_reparation):
         """Réactive les revenus après la fin de la réparation."""
         self.en_reparation_flag = False  # Réinitialiser le drapeau
         self.revenu_par_periode = revenus_avant_reparation  # Restaurer les revenus
         self.reparer()  # Remettre l'état de la machine à 100%
-        self.technicien.unassign_from_machine()
-        self.technicien = None
+        if self.technicien is not None:
+            self.technicien.unassign_from_machine()
+            self.technicien = None
 
     def baisse_revenu(self):
         # Simule la baisse de revenu de la machine en fonction de l'état
