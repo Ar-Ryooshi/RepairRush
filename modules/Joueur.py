@@ -66,7 +66,20 @@ class Joueur:
             return True
         return False
 
-def creer_labels_profil(root, joueur):
+    def payer_salaires(self):
+        """
+        Soustrait le salaire quotidien de tous les techniciens engagés.
+        """
+        total_salaires = sum(technicien.salaire for technicien in self.techniciens_possedes)
+        if self.argent >= total_salaires:
+            self.argent -= total_salaires
+            print(f"Salaires payés : {total_salaires} €.")
+        else:
+            print("Pas assez d'argent pour payer tous les salaires !")
+            # Gestion d'erreurs ou pénalités si nécessaire.
+
+
+def creer_labels_profil(root, joueur, selected_currency):
     # Profil du joueur (cadre principal)
     profile_frame = ctk.CTkFrame(root, width=600, height=325, corner_radius=10, fg_color="#FFA500")
     profile_frame.place(x=10, y=10)
@@ -81,11 +94,11 @@ def creer_labels_profil(root, joueur):
 
     # Labels pour le profil
     labels = {
-        "argent": ctk.CTkLabel(profile_frame, text=f"{joueur.argent} €", font=("Arial", 12), text_color="black"),
+        "argent": ctk.CTkLabel(profile_frame, text=f"{int(joueur.argent)} {selected_currency}", font=("Arial", 12), text_color="black"),
         "jour_actuel": ctk.CTkLabel(profile_frame, text=f"{joueur.jour_actuel}", font=("Arial", 12), text_color="black"),
-        "revenu": ctk.CTkLabel(profile_frame, text=f"{joueur.revenu} €", font=("Arial", 12), text_color="black"),
-        "couts_fixes": ctk.CTkLabel(profile_frame, text=f"{joueur.couts_fixes} €", font=("Arial", 12), text_color="black"),
-        "solde_net": ctk.CTkLabel(profile_frame, text=f"{joueur.solde_net} €", font=("Arial", 12), text_color="black"),
+        "revenu": ctk.CTkLabel(profile_frame, text=f"{int(joueur.revenu)} {selected_currency}", font=("Arial", 12), text_color="black"),
+        "couts_fixes": ctk.CTkLabel(profile_frame, text=f"{int(joueur.couts_fixes)} {selected_currency}", font=("Arial", 12), text_color="black"),
+        "solde_net": ctk.CTkLabel(profile_frame, text=f"{int(joueur.solde_net)} {selected_currency}", font=("Arial", 12), text_color="black"),
     }
 
     # Positionnement
@@ -103,12 +116,12 @@ def creer_labels_profil(root, joueur):
 
     # Méthode pour mettre à jour dynamiquement les labels
     def update_ui():
-        labels["argent"].configure(text=f"{joueur.argent} €")
-        labels["jour_actuel"].configure(text=f"{joueur.jour_actuel}")
-        labels["revenu"].configure(text=f"{joueur.revenu} €")
-        labels["couts_fixes"].configure(text=f"{joueur.couts_fixes} €")
-        labels["solde_net"].configure(text=f"{joueur.solde_net} €")
+        labels["argent"].configure(text=f"{int(joueur.argent)} {selected_currency}")
+        labels["revenu"].configure(text=f"{joueur.revenu} {selected_currency}")
+        labels["couts_fixes"].configure(text=f"{joueur.couts_fixes} {selected_currency}")
+        labels["solde_net"].configure(text=f"{joueur.solde_net} {selected_currency}")
 
     joueur.set_ui_update_callback(update_ui)
 
     return labels
+

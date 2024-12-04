@@ -11,11 +11,16 @@ class Technician:
         self.facteur_reparation = facteur_reparation
         self.image_path = image_path
 
-    def engager(self, joueur):
-        if joueur.argent >= self.salaire:
-            joueur.argent -= self.salaire
+    def engager(self, joueur, progression_jour=1.0):
+        """
+        Engage le technicien et soustrait le salaire ajusté.
+        progression_jour est un float entre 0 et 1 indiquant la progression de la journée.
+        """
+        cout_restant = self.salaire * progression_jour
+        if joueur.argent >= cout_restant:
+            joueur.argent -= int(cout_restant) #empêche que le .0 soit ajouté
             joueur.techniciens_possedes.append(self)
-            print(f"{self.nom} engagé.")
+            print(f"{self.nom} engagé pour {cout_restant:.2f}.")
             return True
         print(f"Pas assez d'argent pour engager {self.nom}.")
         return False
@@ -23,6 +28,7 @@ class Technician:
     def licencier(self, joueur):
         if self in joueur.techniciens_possedes:
             joueur.techniciens_possedes.remove(self)
+            joueur.trigger_ui_update()
             print(f"{self.nom} licencié.")
             return True
         print(f"{self.nom} n'est pas engagé, donc ne peut pas être licencié.")
@@ -76,20 +82,27 @@ def update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons
 
         def licencier_technicien(tech=technician):
             if tech.licencier(joueur):
-                argent_label.configure(text=f"{joueur.argent} €")
+                argent_label.configure(text=f"{joueur.argent}")
                 update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons)
                 # Réactiver le bouton d'engagement
                 engagement_buttons[tech].configure(state="normal")
 
         fire_button = ctk.CTkButton(tech_frame, text="Licencier", font=("Arial", 10), command=licencier_technicien)
         fire_button.pack(pady=5)
+        
 
 # Fonction pour engager un technicien
-def engager_technicien(technicien, joueur, engaged_frame, argent_label, engagement_buttons, button):
-    if len(joueur.techniciens_possedes) < 6 and technicien not in joueur.techniciens_possedes:
-        if technicien.engager(joueur):  # Cette méthode modifie `argent` du joueur
-            joueur.trigger_ui_update()  # Met automatiquement à jour l'interface
-            update_engaged_frame(engaged_frame, joueur, engagement_buttons)
+def engager_technicien(technicien, joueur, engaged_frame, argent_label, engagement_buttons, button, progress_bar):
+    progression = progress_bar.get()  # Entre 0.0 et 1.0
+    salaire_proportionnel = int(technicien.salaire * progression)  # Arrondi au plus proche entier
+    if joueur.argent >= salaire_proportionnel:
+        joueur.argent -= salaire_proportionnel  # Déduire le salaire arrondi
+        if technicien.engager(joueur):  # Engage le technicien
+            joueur.trigger_ui_update()
+            update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons)
             button.configure(state="disabled")
+    else:
+        print(f"Pas assez d'argent pour engager {technicien.nom}.")
+
 
 

@@ -3,13 +3,11 @@ from customtkinter import CTk
 import time
 from PIL import Image, ImageTk
 from modules.Machines import Machine, machines_disponibles,machines_possedees, InterfaceGraphique, acheter_machine
-from modules.Technician import technicians, engagement_buttons, update_engaged_frame, engager_technicien
-
-
+from modules.Technician import Technician, technicians, engagement_buttons, update_engaged_frame, engager_technicien
 # from sound_manager import SoundManager
-from modules.joueur_class import Joueur, creer_labels_profil
-
-
+from modules.Joueur import Joueur, creer_labels_profil
+import pickle
+import tkinter.messagebox as messagebox
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 # sound_manager = SoundManager()
@@ -54,10 +52,33 @@ def afficher_frame(frame):
 # Frame des techniciens engagés (limité à 6)
 engaged_frame = ctk.CTkFrame(menu_principal_frame, width=1160, height=200, fg_color="#333333")
 engaged_frame.place(x=10, y=500)
+#region Currency
+# Monnaie sélectionnée par défaut (euros)
 
+selected_currency = "€"
+# Menu déroulant pour sélectionner la monnaie
+currency_options = ["€", "$", "£"]
+currency_var = ctk.StringVar(value=selected_currency)
+def update_scrollable_frame():
+    for widget in scrollable_frame.winfo_children():
+        widget.destroy()
+    afficher_machines()  # Ou la méthode qui recrée l'affichage
+# Fonction pour mettre à jour la monnaie sélectionnée
+def update_labels_profil():
+    labels_profil["argent"].configure(text=f"{int(joueur.argent)} {selected_currency}")
+    labels_profil["revenu"].configure(text=f"{joueur.revenu} {selected_currency}")
+    labels_profil["couts_fixes"].configure(text=f"{joueur.couts_fixes} {selected_currency}")
+    labels_profil["solde_net"].configure(text=f"{joueur.solde_net} {selected_currency}")
+
+def update_currency(choice):
+    global selected_currency
+    selected_currency = choice
+    afficher_machines() # Mettre à jour l'affichage des machines avec la nouvelle monnaie
+    update_labels_profil()  # Mettre à jour les labels du profil
+#endregion
 
 # Créer les labels du profil et récupérer les références nécessaires
-labels_profil = creer_labels_profil(menu_principal_frame, joueur)
+labels_profil = creer_labels_profil(menu_principal_frame, joueur, selected_currency)
 joueur.trigger_ui_update()
 
 
@@ -76,32 +97,21 @@ progress_bar.place(x=10, y=350)
 #endregion
 # Barre de progression
 def update_progress_bar(i=0):
+    if i == 0:
+        joueur.payer_salaires()  # Payer les salaires au début du jour
     if i <= 3000:
         progress_bar.set(i / 3000)
         root.after(10, update_progress_bar, i + 1)
     else:
         progress_bar.set(0)
         root.after(10, update_progress_bar, 0)
-        joueur.incrementer_jour()  # Automatiquement met à jour l'interface
+        joueur.incrementer_jour()
         joueur.ajouter_revenu()
         # sound_manager.play_effect("sounds/ca-ching.mp3")  # Jouer le son de gain d'argent
 
 def start_progress():
     update_progress_bar()
-#region Currency
-# Monnaie sélectionnée par défaut (euros)
-selected_currency = "€"
 
-# Menu déroulant pour sélectionner la monnaie
-currency_options = ["€", "$", "£"]
-currency_var = ctk.StringVar(value=selected_currency)
-
-# Fonction pour mettre à jour la monnaie sélectionnée
-def update_currency(choice):
-    global selected_currency
-    selected_currency = choice
-    afficher_machines()  # Mettre à jour l'affichage des machines avec la nouvelle monnaie
-#endregion
 scrollable_frame = ctk.CTkScrollableFrame(menu_principal_frame, width=660, height=300, fg_color="#FF7F7F")
 scrollable_frame.place(x=660, y=100)
 
@@ -113,7 +123,7 @@ def afficher_machines():
         widget.destroy()
 
     # Ajouter les titres des colonnes
-    col_titles = ["Nom", "Niveau", "Type", "Revenu par période", "Action"]
+    col_titles = ["","Nom", "Niveau", "Type", "Revenu par période"]
     for idx, title in enumerate(col_titles):
         title_label = ctk.CTkLabel(scrollable_frame, text=title, text_color="white", font=("Arial", 12, "bold"))
         title_label.grid(row=0, column=idx, padx=10, pady=5, sticky="w")
@@ -177,8 +187,8 @@ def afficher_machines():
 
         # Bouton pour acheter la machine
         
-        buy_button = ctk.CTkButton(scrollable_frame, text=f"Acheter ({machine.cout_achat} {selected_currency})", width=150,
-                                    command=lambda mach=machine: acheter_machine(mach, joueur, interface_machines))
+        buy_button = ctk.CTkButton(scrollable_frame,text=f"{machine.cout_achat} {selected_currency}",width=150,command=lambda mach=machine: acheter_machine(mach, joueur, interface_machines, update_scrollable_frame))
+
         buy_button.grid(row=row_offset + j * 2 + 2, column=5, padx=10, pady=5)
  
 
@@ -224,7 +234,7 @@ def afficher_techniciens():
         niveau_label = ctk.CTkLabel(scrollable_frame, text=f"{technician.niveau}")
         niveau_label.grid(row=i * 2 + 2, column=3, padx=10, pady=5, sticky="w")
 
-        salaire_label = ctk.CTkLabel(scrollable_frame, text=f"{technician.salaire} €")
+        salaire_label = ctk.CTkLabel(scrollable_frame, text=f"{technician.salaire} {selected_currency}")
         salaire_label.grid(row=i * 2 + 2, column=4, padx=10, pady=5, sticky="w")
 
         # Bouton pour engager le technicien
@@ -238,8 +248,7 @@ def afficher_techniciens():
             hire_button.configure(state="disabled")
 
         # Fonction pour engager le technicien
-        # Interface.py (ou le fichier où vous configurez les boutons)
-        hire_button.configure(command=lambda t=technician, b=hire_button: engager_technicien(t, joueur, engaged_frame, labels_profil, engagement_buttons, b))
+        hire_button.configure(command=lambda t=technician, b=hire_button: engager_technicien(t, joueur, engaged_frame, labels_profil["argent"], engagement_buttons, b, progress_bar))
         hire_button.grid(row=i * 2 + 2, column=5, padx=10, pady=5)
 
 
@@ -265,14 +274,14 @@ son_button.place(x=350, y=20)
 profil_button.place(x=600, y=20)
 #endregion
 #region --- PAGE PARTIE ---
-save_button = ctk.CTkButton(partie_frame, text="Sauvegarder")
-load_button = ctk.CTkButton(partie_frame, text="Charger une partie")
-reset_button = ctk.CTkButton(partie_frame, text="Réinitialiser la partie")
 
-# Position des boutons sur la page Partie
+save_button = ctk.CTkButton(partie_frame, text="Sauvegarder")
 save_button.place(x=100, y=100)
+
+load_button = ctk.CTkButton(partie_frame, text="Charger une partie")
 load_button.place(x=100, y=160)
-reset_button.place(x=100, y=220)
+
+
 
 # Garder les boutons Partie, Son, Profil dans chaque sous-menu
 partie_button = ctk.CTkButton(partie_frame, text="Partie", width=200, command=lambda: afficher_frame(partie_frame))

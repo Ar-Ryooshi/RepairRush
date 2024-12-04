@@ -114,10 +114,10 @@ class InterfaceGraphique:
         for machine in self.machines:
             machine.degrader_etat_progressivement()
             
-def acheter_machine(machine, joueur, interface_machines):
-    """Permet d'acheter une machine si le joueur a suffisamment d'argent."""
-    if joueur.acheter_machine(machine):  # Directement géré par le setter
+def acheter_machine(machine, joueur, interface_machines, update_scrollable_frame):
+    if joueur.acheter_machine(machine):
         interface_machines.update_interface(machines_possedees)
+        update_scrollable_frame()  # Appelle la fonction de mise à jour
         print(f"Machine {machine.nom} achetée.")
     else:
         print("Pas assez d'argent pour acheter cette machine.")
