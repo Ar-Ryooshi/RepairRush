@@ -122,6 +122,12 @@ def open_assign_window(technician, joueur):
         machine_button.pack(pady=5)
 
 def assign_technician_to_machine(technician, machine, window):
+    # Vérifier si la machine est déjà occupée par un technicien
+    if machine.technicien is not None:
+        print(f"Impossible d'assigner {technician.nom} à la machine {machine.nom}. La machine est déjà occupée.")
+        return
+    
+    # Si la machine est libre, assigner le technicien
     if machine.assign_technician(technician):
         print(f"{technician.nom} a été assigné à la machine {machine.nom}.")
         window.destroy()
