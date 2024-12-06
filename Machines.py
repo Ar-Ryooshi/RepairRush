@@ -24,8 +24,14 @@ class Machine:
         if self.technicien is not None:
             print(f"Machine {self.nom} a déjà un technicien assigné.")
             return False
+
         if technician.assigned_machine is not None:
             technician.assigned_machine.technicien = None
+
+        if technician.specialite != self.type_machine:
+            print(f"{technician.nom} ne peut pas être assigné à la machine {self.nom} car il n'a pas la spécialité {self.type_machine}.")
+            return False
+        
         technician.assigned_machine = self
         self.technicien = technician
         print(f"{technician.nom} a été assigné à la machine {self.nom}.")
@@ -189,7 +195,7 @@ def acheter_machine(machine, joueur, argent_value, scrollable_frame, interface_m
         print("Pas assez d'argent pour acheter cette machine.")
 # Liste des machines disponibles à l'achat
 machines_disponibles = [
-    Machine("Tour", "Maître", "Méchanique", 25000, 6000, 3500, 0.165, "images/TourNiveau2.png"),
+    Machine("Tour", "Maître", "Mécanique", 25000, 6000, 3500, 0.165, "images/TourNiveau2.png"),
     Machine("CNC", "Artisan", "Électrique", 30000, 7000, 4000, 0.135, "images/CNCNiveau1.png"),
     Machine("CNC", "Virtuose", "Électrique", 35000, 9000, 4500, 0.12, "images/CNCNiveau2.png"),
     Machine("Bras Robot", "Rookie", "Informatique", 15000, 4000, 2000, 0.1, "images/RobotNiveau1.png"),
@@ -198,7 +204,7 @@ machines_disponibles = [
 
 # Liste des machines possédées par le joueur au départ (une seule machine niveau 1)
 machines_possedees = [
-    Machine("Tour", "Apprentis", "Méchanique", 20000, 10000, 3000, 0.21, "images/TourNiveau1.png")
+    Machine("Tour", "Apprentis", "Mécanique", 20000, 10000, 3000, 0.21, "images/TourNiveau1.png")
 ]
 
 # Exemple d'utilisation dans un autre fichier
