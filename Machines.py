@@ -36,6 +36,14 @@ class Machine:
         self.technicien = technician
         print(f"{technician.nom} a été assigné à la machine {self.nom}.")
         return True
+
+    def unassign_technician(self):
+        if self.technicien is None:
+            print(f"Aucun technicien n'est assigné à la machine {self.nom}.")
+            return False
+        print(f"{self.technicien.nom} a été désassigné de la machine {self.nom}.")
+        self.technicien = None
+        return True
     
     def create_interface(self, root):
         """Crée l'interface visuelle pour chaque machine."""
@@ -140,6 +148,8 @@ class Machine:
         if self.etat < 30:
             baisse_revenu = self.revenu_par_periode * 0.5
             return baisse_revenu
+        if self.etat == 0:
+            return baisse_revenu == 0
 
 # Classe InterfaceGraphique
 class InterfaceGraphique:
