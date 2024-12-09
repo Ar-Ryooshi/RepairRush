@@ -12,31 +12,48 @@ class Technician:
         self.image_path = image_path
         self.assigned_machine = None
 
-    def assign_to_machine(self, machine):
+    def assign_to_machine(self, machine, assign_button, joueur):
         if self.assigned_machine is not None:
             print(f"{self.nom} est déjà assigné à une machine.")
             return False
         self.assigned_machine = machine
         machine.technicien = self
         print(f"{self.nom} a été assigné à la machine {machine.nom}.")
+        assign_button.configure(text="Désaffecter", command=lambda: self.unassign_from_machine(assign_button, joueur))
         return True
-
-    def engager(self, joueur):
-        if joueur.argent >= self.salaire:
-            joueur.argent -= self.salaire
-            joueur.techniciens_possedes.append(self)
-            print(f"{self.nom} engagé.")
-            return True
-        print(f"Pas assez d'argent pour engager {self.nom}.")
+    
+def unassign_from_machine(self, assign_button=None, joueur=None):
+    if self.assigned_machine is None:
+        print(f"{self.nom} n'est pas assigné à une machine.")
         return False
+    print(f"{self.nom} a été désassigné de la machine {self.assigned_machine.nom}.")
+    self.assigned_machine.technicien = None
+    self.assigned_machine = None
+    if assign_button:
+        assign_button.configure(text="Attribuer", command=lambda: open_assign_window(self, joueur, assign_button))
+    return True
 
-    def licencier(self, joueur):
-        if self in joueur.techniciens_possedes:
-            joueur.techniciens_possedes.remove(self)
-            print(f"{self.nom} licencié.")
-            return True
-        print(f"{self.nom} n'est pas engagé, donc ne peut pas être licencié.")
-        return False
+def engager(self, joueur):
+    if joueur.argent >= self.salaire:
+        joueur.argent -= self.salaire
+        joueur.techniciens_possedes.append(self)
+        print(f"{self.nom} engagé.")
+        return True
+    print(f"Pas assez d'argent pour engager {self.nom}.")
+    return False
+
+def licencier(self, joueur):
+    if self in joueur.techniciens_possedes:
+        # Désassigner le technicien s'il est assigné à une machine
+        if self.assigned_machine is not None:
+            print(f"{self.nom} est désassigné de la machine {self.assigned_machine.nom} avant d'être licencié.")
+            self.unassign_from_machine(None, joueur)  # Aucun bouton n'est passé ici
+        
+        joueur.techniciens_possedes.remove(self)
+        print(f"{self.nom} licencié.")
+        return True
+    print(f"{self.nom} n'est pas engagé, donc ne peut pas être licencié.")
+    return False
 
 # Liste des techniciens disponibles
 technicians = [
@@ -84,7 +101,7 @@ def update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons
         name_label.pack()
 
         # Boutons Attribuer et Licencier
-        assign_button = ctk.CTkButton(tech_frame, text="Attribuer", font=("Arial", 10), command=lambda tech=technician: open_assign_window(tech, joueur))
+        assign_button = ctk.CTkButton(tech_frame, text="Attribuer", font=("Arial", 10), command=lambda tech=technician: open_assign_window(tech, joueur, assign_button))
         assign_button.pack(pady=5)
 
         def licencier_technicien(tech=technician):
@@ -109,7 +126,7 @@ def engager_technicien(technicien, joueur, argent_value, engaged_frame, engageme
         print("Nombre maximum de techniciens atteint ou technicien déjà engagé!")
 
 # Fonction pour ouvrir une fenêtre d'assignation
-def open_assign_window(technician, joueur):
+def open_assign_window(technician, joueur, assign_button):
     from Machines import machines_possedees  # Import local pour éviter les importations circulaires
     assign_window = ctk.CTkToplevel()
     assign_window.title("Attribuer un technicien à une machine")
@@ -118,17 +135,17 @@ def open_assign_window(technician, joueur):
     ctk.CTkLabel(assign_window, text=f"Attribuer {technician.nom} à une machine", font=("Arial", 14)).pack(pady=10)
 
     for machine in machines_possedees:
-        machine_button = ctk.CTkButton(assign_window, text=f"{machine.nom} ({machine.niveau_machine})", command=lambda m=machine: assign_technician_to_machine(technician, m, assign_window))
+        machine_button = ctk.CTkButton(assign_window, text=f"{machine.nom} ({machine.niveau_machine})", command=lambda m=machine: assign_technician_to_machine(technician, m, assign_window, assign_button, joueur))
         machine_button.pack(pady=5)
 
-def assign_technician_to_machine(technician, machine, window):
+def assign_technician_to_machine(technician, machine, window, assign_button, joueur):
     # Vérifier si la machine est déjà occupée par un technicien
     if machine.technicien is not None:
         print(f"Impossible d'assigner {technician.nom} à la machine {machine.nom}. La machine est déjà occupée.")
         return
     
     # Si la machine est libre, assigner le technicien
-    if machine.assign_technician(technician):
+    if technician.assign_to_machine(machine, assign_button, joueur):
         print(f"{technician.nom} a été assigné à la machine {machine.nom}.")
         window.destroy()
     else:
@@ -185,5 +202,4 @@ if __name__ == "__main__":
         # Assigner la fonction d'engagement au bouton
         action_button.configure(command=lambda t=technician, b=action_button: engager_technicien(t, b))
 
-    # Lancer l'interface graphique
     root.mainloop()
