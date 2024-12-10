@@ -18,30 +18,34 @@ class Machine:
         self.frame = None
         self.image = None  # Garder une référence de l'image
         self.technicien = None  # Initialisation à None
+        self.en_reparation_flag = False  # Indicateur de réparation
 
     def assign_technician(self, technician):
         """Assigne un technicien à cette machine."""
         if self.technicien is not None:
-            print(f"Machine {self.nom} a déjà un technicien assigné.")
+            print(f"Machine {self.nom} ({self.niveau_machine}) a déjà un technicien assigné.")
             return False
-
+        if self.en_reparation_flag:
+            print(f"Machine {self.nom} ({self.niveau_machine}) est en réparation et ne peut pas être assignée à un technicien.")
+            return False
         if technician.assigned_machine is not None:
             technician.assigned_machine.technicien = None
-
         if technician.specialite != self.type_machine:
-            print(f"{technician.nom} ne peut pas être assigné à la machine {self.nom} car il n'a pas la spécialité {self.type_machine}.")
-            return False
-        
+            print(f"{technician.nom} ne peut pas être assigné à la machine {self.nom} ({self.niveau_machine}) car il n'a pas la spécialité {self.type_machine}.")
+            return False     
         technician.assigned_machine = self
         self.technicien = technician
-        print(f"{technician.nom} a été assigné à la machine {self.nom}.")
+        print(f"{technician.nom} a été assigné à la machine {self.nom} ({self.niveau_machine}).")
         return True
 
     def unassign_technician(self):
         if self.technicien is None:
-            print(f"Aucun technicien n'est assigné à la machine {self.nom}.")
+            print(f"Aucun technicien n'est assigné à la machine {self.nom} ({self.niveau_machine}).")
             return False
-        print(f"{self.technicien.nom} a été désassigné de la machine {self.nom}.")
+        if self.en_reparation_flag:
+            print(f"Machine {self.nom} ({self.niveau_machine}) est en réparation et le technicien ne peut pas être désassigné.")
+            return False
+        print(f"{self.technicien.nom} a été désassigné de la machine {self.nom} ({self.niveau_machine}).")
         self.technicien = None
         return True
     
@@ -99,43 +103,27 @@ class Machine:
         """Répare la machine (remet l'état à 100%)."""
         self.etat = 100
         self.update_barre()
+        self.stop_repair()
+
 
     def reparer_temps(self):
         """Répare la machine après un certain temps."""
         if self.technicien is not None:
+            self.start_repair()
             self.frame.after(int(self.temps_entretien * self.technicien.facteur_reparation), self.reparer)
         else:
             print("Aucun technicien assigné à cette machine.")
     
-    def en_reparation(self):
-        """Suspend les revenus pendant la réparation de la machine."""
-        if not hasattr(self, 'en_reparation_flag'):
-            self.en_reparation_flag = False  # Ajoute un indicateur de réparation à l'instance
+    def start_repair(self):
+        """Démarre la réparation de la machine."""
+        self.en_reparation_flag = True
+        print(f"Réparation de la machine {self.nom} ({self.niveau_machine}) commencée.")
 
-        # Si déjà en réparation, ne rien faire
-        if self.en_reparation_flag:
-            return
 
-        self.en_reparation_flag = True  # Drapeau pour indiquer que la machine est en réparation
-
-        # Arrêter les revenus
-        revenus_avant_reparation = self.revenu_par_periode
-        self.revenu_par_periode = 0
-
-        # Lancer la réparation
-        if self.technicien is not None:
-            self.frame.after(self.temps_entretien * self.technicien.facteur_reparation, self.finir_reparation, revenus_avant_reparation)
-        else:
-            print("Aucun technicien assigné à cette machine.")
-
-    def finir_reparation(self, revenus_avant_reparation):
-        """Réactive les revenus après la fin de la réparation."""
-        self.en_reparation_flag = False  # Réinitialiser le drapeau
-        self.revenu_par_periode = revenus_avant_reparation  # Restaurer les revenus
-        self.reparer()  # Remettre l'état de la machine à 100%
-        if self.technicien is not None:
-            self.technicien.unassign_from_machine()
-            self.technicien = None
+    def stop_repair(self):
+        """Arrête la réparation de la machine."""
+        self.en_reparation_flag = False
+        print(f"Réparation de la machine {self.nom} ({self.niveau_machine}) terminée.")
 
     def baisse_revenu(self):
         # Simule la baisse de revenu de la machine en fonction de l'état
@@ -214,7 +202,7 @@ machines_disponibles = [
 
 # Liste des machines possédées par le joueur au départ (une seule machine niveau 1)
 machines_possedees = [
-    Machine("Tour", "Apprentis", "Mécanique", 20000, 10000, 3000, 0.21, "images/TourNiveau1.png")
+    Machine("Tour", "Apprenti", "Mécanique", 20000, 10000, 3000, 0.21, "images/TourNiveau1.png")
 ]
 
 # Exemple d'utilisation dans un autre fichier
