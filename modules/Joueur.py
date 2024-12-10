@@ -1,11 +1,13 @@
-from modules.Machines import machines_disponibles, machines_possedees
+from modules.Machines2 import machines_disponibles, machines_possedees
 import customtkinter as ctk
 from PIL import Image, ImageTk
+from NotificationsManager import get_global_notifications_manager
 
 class Joueur:
-    def __init__(self, nom, entreprise, argent=100000):
+    def __init__(self, nom, entreprise, photo, argent=100000):
         self.nom = nom
         self.entreprise = entreprise
+        self.photo = photo
         self._argent = argent
         self._jour_actuel = 1
         self.machines_possedees = machines_possedees  # Initialiser avec les machines de départ
@@ -65,35 +67,39 @@ class Joueur:
             self.trigger_ui_update()
             return True
         return False
-
+    
     def payer_salaires(self):
-        """
-        Soustrait le salaire quotidien de tous les techniciens engagés.
-        """
+        manager = get_global_notifications_manager()
         total_salaires = sum(technicien.salaire for technicien in self.techniciens_possedes)
         if self.argent >= total_salaires:
             self.argent -= total_salaires
-            print(f"Salaires payés : {total_salaires} €.")
+        if manager:
+            manager.ajouter_notification(f"Salaires payés : {total_salaires} €.")
         else:
-            print("Pas assez d'argent pour payer tous les salaires !")
-            # Gestion d'erreurs ou pénalités si nécessaire.
+            if manager:
+                manager.ajouter_notification("Pas assez d'argent pour payer tous les salaires !")
 
 
-def creer_labels_profil(root, joueur, selected_currency):
+
+
+def creer_labels_profil(root, joueur, selected_currency, image_path="images/Profil2.png"):
+
     # Profil du joueur (cadre principal)
-    profile_frame = ctk.CTkFrame(root, width=600, height=325, corner_radius=10, fg_color="#FFA500")
+    profile_frame = ctk.CTkFrame(root, width=600, height=330, corner_radius=10, fg_color="#FFA500")
     profile_frame.place(x=10, y=10)
 
-    # Ajout de l'image du joueur
-    image_path = "Images/qatari_boss.png"  # Assurez-vous que l'image est dans le dossier 'Images'
+    # Ajout de l'image du joueur 
+    image_path = joueur.photo
     image = Image.open(image_path)
     photo_de_profil = ctk.CTkImage(light_image=image, size=(80, 80))
 
     profile_image_label = ctk.CTkLabel(profile_frame, text="", image=photo_de_profil)
     profile_image_label.place(x=20, y=20)
 
-    # Labels pour le profil
+    # Labels pour les informations principales
     labels = {
+        "nom": ctk.CTkLabel(profile_frame, text=f"{joueur.nom}", font=("Arial", 16, "bold"), text_color="black"),
+        "entreprise": ctk.CTkLabel(profile_frame, text=f"{joueur.entreprise}", font=("Arial", 12), text_color="black"),
         "argent": ctk.CTkLabel(profile_frame, text=f"{int(joueur.argent)} {selected_currency}", font=("Arial", 12), text_color="black"),
         "jour_actuel": ctk.CTkLabel(profile_frame, text=f"{joueur.jour_actuel}", font=("Arial", 12), text_color="black"),
         "revenu": ctk.CTkLabel(profile_frame, text=f"{int(joueur.revenu)} {selected_currency}", font=("Arial", 12), text_color="black"),
@@ -101,13 +107,15 @@ def creer_labels_profil(root, joueur, selected_currency):
         "solde_net": ctk.CTkLabel(profile_frame, text=f"{int(joueur.solde_net)} {selected_currency}", font=("Arial", 12), text_color="black"),
     }
 
-    # Positionnement
+    # Positionnement des labels
     labels_positions = [
-        ("Argent:", 120, 100, "argent"),
-        ("Jour actuel:", 120, 130, "jour_actuel"),
-        ("Revenu par période:", 120, 160, "revenu"),
-        ("Coûts fixes:", 120, 190, "couts_fixes"),
-        ("Solde net:", 120, 220, "solde_net"),
+        ("Nom :", 120, 30, "nom"),
+        ("Entreprise :", 120, 60, "entreprise"),
+        ("Argent :", 120, 100, "argent"),
+        ("Jour actuel :", 120, 130, "jour_actuel"),
+        ("Revenu par période :", 120, 160, "revenu"),
+        ("Coûts fixes :", 120, 190, "couts_fixes"),
+        ("Solde net :", 120, 220, "solde_net"),
     ]
 
     for text, x, y, key in labels_positions:
@@ -116,6 +124,8 @@ def creer_labels_profil(root, joueur, selected_currency):
 
     # Méthode pour mettre à jour dynamiquement les labels
     def update_ui():
+        labels["nom"].configure(text=f"{joueur.nom}")
+        labels["entreprise"].configure(text=f"{joueur.entreprise}")
         labels["argent"].configure(text=f"{int(joueur.argent)} {selected_currency}")
         labels["revenu"].configure(text=f"{joueur.revenu} {selected_currency}")
         labels["couts_fixes"].configure(text=f"{joueur.couts_fixes} {selected_currency}")
@@ -124,4 +134,3 @@ def creer_labels_profil(root, joueur, selected_currency):
     joueur.set_ui_update_callback(update_ui)
 
     return labels
-

@@ -2,7 +2,7 @@ import customtkinter as ctk
 from customtkinter import CTk
 import time
 from PIL import Image, ImageTk
-from modules.Machines import Machine, machines_disponibles,machines_possedees, InterfaceGraphique, acheter_machine
+from modules.Machines2 import Machine, machines_disponibles,machines_possedees, InterfaceGraphique, acheter_machine
 from modules.Technician import Technician, technicians, engagement_buttons, update_engaged_frame, engager_technicien
 # from sound_manager import SoundManager
 from modules.Joueur import Joueur, creer_labels_profil
@@ -11,7 +11,7 @@ import tkinter.messagebox as messagebox
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 # sound_manager = SoundManager()
-joueur = Joueur(nom="Mr Boss", entreprise="Boss International")
+joueur = Joueur(nom="Mr Boss", entreprise="Boss International",photo= "images/Profil1.png")
 
 # Fenêtre principale
 root = ctk.CTk()
@@ -29,29 +29,22 @@ parametres_frame = ctk.CTkFrame(root, width=1500, height=900, fg_color="#E8C36A"
 partie_frame = ctk.CTkFrame(root, width=1500, height=900, fg_color="#E8C36A")
 son_frame = ctk.CTkFrame(root, width=1500, height=900, fg_color="#E8C36A")
 profil_frame = ctk.CTkFrame(root, width=1500, height=900, fg_color="#E8C36A")
+machines_frame = ctk.CTkFrame(menu_principal_frame, width=1380, height=300)
+machines_frame.place(x=10, y=800)
+main_page_frame = ctk.CTkFrame(root, width=1024, height=576)
+main_page_frame.place(relwidth=1, relheight=1)
 
 
-
-#endregion
-
-# Placer tous les frames sur la fenêtre principale
 for frame in (menu_principal_frame, parametres_frame, partie_frame, son_frame, profil_frame):
     frame.place(x=0, y=0, relwidth=1, relheight=1)
+
 # Fonction pour afficher un frame et masquer les autres
 def afficher_frame(frame):
     frame.lift()  # Amène le frame au premier plan
-
-
-
-# --- MENU PRINCIPAL ---
-
-#region --- PROFILE ---
-# Profil du joueur (données principales)
-
-
-# Frame des techniciens engagés (limité à 6)
 engaged_frame = ctk.CTkFrame(menu_principal_frame, width=1160, height=200, fg_color="#333333")
 engaged_frame.place(x=10, y=500)
+
+
 #region Currency
 # Monnaie sélectionnée par défaut (euros)
 
@@ -63,12 +56,18 @@ def update_scrollable_frame():
     for widget in scrollable_frame.winfo_children():
         widget.destroy()
     afficher_machines()  # Ou la méthode qui recrée l'affichage
+
+
+
 # Fonction pour mettre à jour la monnaie sélectionnée
 def update_labels_profil():
     labels_profil["argent"].configure(text=f"{int(joueur.argent)} {selected_currency}")
     labels_profil["revenu"].configure(text=f"{joueur.revenu} {selected_currency}")
     labels_profil["couts_fixes"].configure(text=f"{joueur.couts_fixes} {selected_currency}")
     labels_profil["solde_net"].configure(text=f"{joueur.solde_net} {selected_currency}")
+
+
+
 
 def update_currency(choice):
     global selected_currency
@@ -77,24 +76,28 @@ def update_currency(choice):
     update_labels_profil()  # Mettre à jour les labels du profil
 #endregion
 
+
+
+
+
+
 # Créer les labels du profil et récupérer les références nécessaires
 labels_profil = creer_labels_profil(menu_principal_frame, joueur, selected_currency)
 joueur.trigger_ui_update()
 
-
-# Fonction pour mettre à jour le profil
-
-
-# Mettre à jour les données du profil initialement
-
-
-# Mettre à jour les données du profil initialement
-
+joueur.jour_actuel
+if joueur.jour_actuel == 20:
+    messagebox.showinfo("Fin de la partie", "La partie est terminée !")
+    root.destroy()
+    exit()
 
 progress_bar = ctk.CTkProgressBar(menu_principal_frame, width=600, height=30, progress_color='green')
 progress_bar.place(x=10, y=350)
 
 #endregion
+
+
+
 # Barre de progression
 def update_progress_bar(i=0):
     if i == 0:
@@ -107,13 +110,23 @@ def update_progress_bar(i=0):
         root.after(10, update_progress_bar, 0)
         joueur.incrementer_jour()
         joueur.ajouter_revenu()
+        
         # sound_manager.play_effect("sounds/ca-ching.mp3")  # Jouer le son de gain d'argent
+
+
+
+
 
 def start_progress():
     update_progress_bar()
 
+
+
+
 scrollable_frame = ctk.CTkScrollableFrame(menu_principal_frame, width=660, height=300, fg_color="#FF7F7F")
 scrollable_frame.place(x=660, y=100)
+
+
 
 # Fonction pour afficher les machines
 def afficher_machines():
@@ -190,14 +203,6 @@ def afficher_machines():
         buy_button = ctk.CTkButton(scrollable_frame,text=f"{machine.cout_achat} {selected_currency}",width=150,command=lambda mach=machine: acheter_machine(mach, joueur, interface_machines, update_scrollable_frame))
 
         buy_button.grid(row=row_offset + j * 2 + 2, column=5, padx=10, pady=5)
- 
-
-
-
-
-    
-
-
 
 # Fonction pour afficher les techniciens
 def afficher_techniciens():
@@ -251,115 +256,88 @@ def afficher_techniciens():
         hire_button.configure(command=lambda t=technician, b=hire_button: engager_technicien(t, joueur, engaged_frame, labels_profil["argent"], engagement_buttons, b, progress_bar))
         hire_button.grid(row=i * 2 + 2, column=5, padx=10, pady=5)
 
+#region --- NOTIFICATIONS ---
+# Notifications pour les actions du joueur
+from NotificationsManager import NotificationsManager, set_global_notifications_manager
 
+notifications_manager = NotificationsManager(menu_principal_frame, x=1400, y=50, width=300, height=500)
+set_global_notifications_manager(notifications_manager)
 
+notifications_manager.ajouter_notification("Bienvenue dans le jeu !")
+#endregion
 #region Boutons tech et machines
+# Bouton "Machines"
 btn_machine = ctk.CTkButton(menu_principal_frame, text="Machines", width=140, height=50, command=afficher_machines)
 btn_machine.place(x=650, y=20)
 
+# Bouton "Techniciens"
 btn_technicien = ctk.CTkButton(menu_principal_frame, text="Techniciens", width=140, height=50, command=afficher_techniciens)
 btn_technicien.place(x=800, y=20)
+
+# Bouton "Paramètres" avec un symbole d'engrenage
+btn_parametres = ctk.CTkButton(
+    menu_principal_frame, 
+    text="⚙️",  # Utilisation d'un emoji pour le symbole d'engrenage
+    width=50, 
+    height=50, 
+    command=lambda: afficher_frame(parametres_frame)  # Accès à la page des paramètres
+)
+btn_parametres.place(x=960, y=20)  # Position à côté des autres boutons
+
+
 #endregion
 # Fonction pour afficher les techniciens
 
 #region --- PARAMÈTRES ---
 # Boutons pour les différentes sections des options (Partie, Son, Profil)
-partie_button = ctk.CTkButton(parametres_frame, text="Partie", width=200, command=lambda: afficher_frame(partie_frame))
-son_button = ctk.CTkButton(parametres_frame, text="Son", width=200, command=lambda: afficher_frame(son_frame))
-profil_button = ctk.CTkButton(parametres_frame, text="Profil", width=200, command=lambda: afficher_frame(profil_frame))
 
 # Position des boutons dans le frame des paramètres
-partie_button.place(x=100, y=20)
-son_button.place(x=350, y=20)
-profil_button.place(x=600, y=20)
+
 #endregion
 #region --- PAGE PARTIE ---
 
-save_button = ctk.CTkButton(partie_frame, text="Sauvegarder")
-save_button.place(x=100, y=100)
-
-load_button = ctk.CTkButton(partie_frame, text="Charger une partie")
-load_button.place(x=100, y=160)
+# Page unique pour toutes les fonctionnalités
 
 
+# --- Section Profil ---
+profile_label = ctk.CTkLabel(parametres_frame, text="Profil", font=("Arial", 20, "bold"),text_color="black")
+profile_label.place(x=50, y=20)
 
-# Garder les boutons Partie, Son, Profil dans chaque sous-menu
-partie_button = ctk.CTkButton(partie_frame, text="Partie", width=200, command=lambda: afficher_frame(partie_frame))
-son_button = ctk.CTkButton(partie_frame, text="Son", width=200, command=lambda: afficher_frame(son_frame))
-profil_button = ctk.CTkButton(partie_frame, text="Profil", width=200, command=lambda: afficher_frame(profil_frame))
+name_label = ctk.CTkLabel(parametres_frame, text="Nom:",text_color="black")
+name_label.place(x=50, y=60)
+name_entry = ctk.CTkEntry(parametres_frame)
+name_entry.place(x=150, y=60)
 
-# Position des boutons
-partie_button.place(x=100, y=20)
-son_button.place(x=350, y=20)
-profil_button.place(x=600, y=20)
+currency_label = ctk.CTkLabel(parametres_frame, text="Monnaie:",text_color="black")
+currency_label.place(x=50, y=100)
+currency_dropdown = ctk.CTkComboBox(parametres_frame, values=["€", "$", "£"], command=update_currency)
+currency_dropdown.place(x=150, y=100)
 
-# Bouton retour pour revenir au menu principal depuis chaque sous-menu
-back_button = ctk.CTkButton(partie_frame, text="←", width=50, command=lambda: afficher_frame(menu_principal_frame))
-back_button.place(x=1200, y=20)
+# --- Section Sauvegarde/Chargement ---
+save_label = ctk.CTkLabel(parametres_frame, text="Partie", font=("Arial", 20, "bold"),text_color="black")
+save_label.place(x=50, y=160)
 
+save_button = ctk.CTkButton(parametres_frame, text="Sauvegarder")
+save_button.place(x=50, y=200)
 
-#endregion
-#region --- PAGE SON ---
-music_label = ctk.CTkLabel(son_frame, text="Musique")
-music_slider = ctk.CTkSlider(son_frame, from_=0, to=100, command=lambda value: sound_manager.set_music_volume(int(value)))
+# --- Section Son ---
+sound_label = ctk.CTkLabel(parametres_frame, text="Son", font=("Arial", 20, "bold"),text_color="black")
+sound_label.place(x=50, y=280)
 
-# Position des éléments sur la page Son
-music_label.place(x=350, y=100)
-music_slider.place(x=350, y=140)
+music_label = ctk.CTkLabel(parametres_frame, text="Musique:",text_color="black")
+music_label.place(x=50, y=320)
+music_slider = ctk.CTkSlider(parametres_frame, from_=0, to=100, command=lambda value: sound_manager.set_music_volume(int(value)))
+music_slider.place(x=150, y=320)
 
-effects_label = ctk.CTkLabel(son_frame, text="Effets Sonores")
-effects_slider = ctk.CTkSlider(son_frame, from_=0, to=100, command=lambda value: sound_manager.set_effect_volume(int(value)))
+effects_label = ctk.CTkLabel(parametres_frame, text="Effets Sonores:",text_color="black")
+effects_label.place(x=50, y=360)
+effects_slider = ctk.CTkSlider(parametres_frame, from_=0, to=100, command=lambda value: sound_manager.set_effect_volume(int(value)))
+effects_slider.place(x=150, y=360)
 
-effects_label.place(x=350, y=180)
-effects_slider.place(x=350, y=220)
+# --- Bouton Retour ---
+back_button = ctk.CTkButton(parametres_frame, text="← Menu Principal", width=200, command=lambda: afficher_frame(menu_principal_frame))
+back_button.place(x=800, y=20)
 
-# Garder les boutons Partie, Son, Profil dans chaque sous-menu
-partie_button = ctk.CTkButton(son_frame, text="Partie", width=200, command=lambda: afficher_frame(partie_frame))
-son_button = ctk.CTkButton(son_frame, text="Son", width=200, command=lambda: afficher_frame(son_frame))
-profil_button = ctk.CTkButton(son_frame, text="Profil", width=200, command=lambda: afficher_frame(profil_frame))
-
-# Position des boutons
-partie_button.place(x=100, y=20)
-son_button.place(x=350, y=20)
-profil_button.place(x=600, y=20)
-
-# Bouton retour pour revenir au menu principal depuis chaque sous-menu
-back_button = ctk.CTkButton(son_frame, text="←", width=50, command=lambda: afficher_frame(menu_principal_frame))
-back_button.place(x=1200, y=20)
-#endregion
-#region --- PAGE PROFIL ---
-name_label = ctk.CTkLabel(profil_frame, text="Nom:")
-name_entry = ctk.CTkEntry(profil_frame)
-currency_label = ctk.CTkLabel(profil_frame, text="Monnaie:")
-currency_dropdown = ctk.CTkComboBox(profil_frame, values=currency_options, command=update_currency, variable=currency_var)
-
-# Position des éléments sur la page Profil
-name_label.place(x=600, y=100)
-name_entry.place(x=600, y=140)
-currency_label.place(x=600, y=180)
-currency_dropdown.place(x=600, y=220)
-
-# Bouton pour ouvrir le menu des paramètres
-options_button = ctk.CTkButton(menu_principal_frame, text="⚙️", width=50, height=50, command=lambda: afficher_frame(parametres_frame))
-options_button.place(x=950, y=20)
-
-# Bouton retour pour revenir au menu principal depuis les paramètres
-back_button = ctk.CTkButton(parametres_frame, text="←", width=50, command=lambda: afficher_frame(menu_principal_frame))
-back_button.place(x=1200, y=20)
-
-# Garder les boutons Partie, Son, Profil dans chaque sous-menu
-partie_button = ctk.CTkButton(profil_frame, text="Partie", width=200, command=lambda: afficher_frame(partie_frame))
-son_button = ctk.CTkButton(profil_frame, text="Son", width=200, command=lambda: afficher_frame(son_frame))
-profil_button = ctk.CTkButton(profil_frame, text="Profil", width=200, command=lambda: afficher_frame(profil_frame))
-
-# Position des boutons
-partie_button.place(x=100, y=20)
-son_button.place(x=350, y=20)
-profil_button.place(x=600, y=20)
-
-# Bouton retour pour revenir au menu principal depuis chaque sous-menu
-back_button = ctk.CTkButton(profil_frame, text="←", width=50, command=lambda: afficher_frame(menu_principal_frame))
-back_button.place(x=1200, y=20)
 #endregion
 
 #region --- INTERFACE DES MACHINES ---

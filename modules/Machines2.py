@@ -1,9 +1,8 @@
 import customtkinter as ctk
 from PIL import Image, ImageTk
-# from NotificationsManager import get_global_notifications_manager
-from Technician import Technician #module a adapter
+from .Technician import Technician   # Importation de la classe
 from customtkinter import CTkImage
-# manager = get_global_notifications_manager()
+
 
 # Classe Machine
 class Machine:
@@ -18,11 +17,12 @@ class Machine:
         self.image_path = image_path
         self.etat = 100
         self.frame = None
-        self.image = None 
-        self.technicien = None 
-        self.en_reparation_flag = False 
+        self.image = None  # Garder une référence de l'image
+        self.technicien = None  # Initialisation à None
+        self.en_reparation_flag = False  # Indicateur de réparation
         self.marteau_image_label = None
-    
+
+
     def assign_technician(self, technician):
         """Assigne un technicien à cette machine."""
         if self.technicien is not None:
@@ -51,7 +51,7 @@ class Machine:
         print(f"{self.technicien.nom} a été désassigné de la machine {self.nom} ({self.niveau_machine}).")
         self.technicien = None
         return True
-
+    
     def create_interface(self, root):
         """Crée l'interface visuelle pour chaque machine."""
         self.frame = ctk.CTkFrame(root, width=200, height=300, corner_radius=10)
@@ -100,43 +100,27 @@ class Machine:
 
     def get_color_for_etat(self):
         """Retourne la couleur appropriée en fonction de l'état actuel."""
-        return "green" if self.etat >= 60 else "yellow" if 20 <= self.etat < 60 else "red"
+        return "green" if self.etat >= 70 else "yellow" if 30 <= self.etat < 70 else "red"
     
-    def calculer_revenu_actuel(self):
-        """Calcule le revenu actuel en fonction de l'état de la machine."""
-        if self.etat >= 60:
-            return self.revenu_par_periode
-        elif 20 <= self.etat < 60:
-            return int(self.revenu_par_periode * 0.5)
-        else:
-            return 0
-        
     def reparer(self):
         """Répare la machine (remet l'état à 100%)."""
         self.etat = 100
         self.update_barre()
-        def reparer_temps(self):
-            """Répare la machine après un certain temps."""
-            if self.technicien is not None:
-                self.start_repair()
-                self.frame.after(int(self.temps_entretien * self.technicien.facteur_reparation), self.reparer)
-            else:
-                if manager:
-                    manager.ajouter_notification("Aucun technicien assigné à cette machine.")
+        self.stop_repair()
+
+
     def reparer_temps(self):
         """Répare la machine après un certain temps."""
         if self.technicien is not None:
             self.start_repair()
             self.frame.after(int(self.temps_entretien * self.technicien.facteur_reparation), self.reparer)
         else:
-            if manager:
-                manager.ajouter_notification("Aucun technicien assigné à cette machine.")
+            print("Aucun technicien assigné à cette machine.")
     
     def start_repair(self):
         """Démarre la réparation de la machine."""
         self.en_reparation_flag = True
-        if manager:
-            manager.ajouter_notification(f"Réparation de la machine {self.nom} ({self.niveau_machine}) commencée.")
+        print(f"Réparation de la machine {self.nom} ({self.niveau_machine}) commencée.")
 
         # Charger l'image du marteau
         marteau_image = CTkImage(Image.open('images/marteau.png').resize((30, 30)))
@@ -152,8 +136,7 @@ class Machine:
     def stop_repair(self):
         """Arrête la réparation de la machine."""
         self.en_reparation_flag = False
-        if manager:
-            manager.ajouter_notification(f"Réparation de la machine {self.nom} ({self.niveau_machine}) terminée.")
+        print(f"Réparation de la machine {self.nom} ({self.niveau_machine}) terminée.")
 
         # Masquer l'image du marteau
         if self.marteau_image_label is not None:
@@ -172,7 +155,6 @@ class Machine:
             return baisse_revenu
         if self.etat == 0:
             return baisse_revenu == 0
-    
 
 # Classe InterfaceGraphique
 class InterfaceGraphique:
@@ -208,33 +190,36 @@ class InterfaceGraphique:
         for machine in self.machines:
             machine.degrader_etat_progressivement()
             
-def acheter_machine(machine, joueur, interface_machines, update_scrollable_frame):
-    manager = get_global_notifications_manager()
-    if joueur.acheter_machine(machine):
+def acheter_machine(machine, joueur, argent_value, scrollable_frame, interface_machines):
+    """Permet d'acheter une machine si le joueur a suffisamment d'argent."""
+    if machine in machines_disponibles and joueur.argent >= machine.cout_achat:
+        joueur.argent -= machine.cout_achat
+
+        # Ajouter la machine à la liste des machines possédées et la retirer des disponibles
+        machines_possedees.append(machine)
+        machines_disponibles.remove(machine)
+
+        # Mise à jour de l'affichage de l'argent du joueur
+        argent_value.configure(text=f"Argent : {joueur.argent} €")
+
+        # Mise à jour de l'interface des machines possédées et disponibles
         interface_machines.update_interface(machines_possedees)
-        update_scrollable_frame()
-        if manager:
-            manager.ajouter_notification(f"Machine {machine.nom} achetée.")
+
+        print(f"Machine {machine.nom} achetée.")
     else:
-        if manager:
-            manager.ajouter_notification("Pas assez d'argent pour acheter cette machine.")
-
-
-    
-
-
+        print("Pas assez d'argent pour acheter cette machine.")
 # Liste des machines disponibles à l'achat
 machines_disponibles = [
-    Machine("Tour", "Maître", "Méchanique", 25000, 6, 3500, 0.165, "images/TourNiveau2.png"),
-    Machine("CNC", "Artisan", "Électrique", 30000, 7, 4000, 0.135, "images/CNCNiveau1.png"),
-    Machine("CNC", "Virtuose", "Électrique", 35000, 9, 4500, 0.12, "images/CNCNiveau2.png"),
-    Machine("Bras Robot", "Rookie", "Informatique", 15000, 4, 2000, 0.1, "images/RobotNiveau1.png"),
-    Machine("Bras Robot", "Légendaire", "Informatique", 23000, 5, 2500, 0.084, "images/RobotNiv2.png")
+    Machine("Tour", "Maître", "Mécanique", 25000, 6000, 3500, 0.165, "images/TourNiveau2.png"),
+    Machine("CNC", "Artisan", "Électrique", 30000, 7000, 4000, 0.135, "images/CNCNiveau1.png"),
+    Machine("CNC", "Virtuose", "Électrique", 35000, 9000, 4500, 0.12, "images/CNCNiveau2.png"),
+    Machine("Bras Robot", "Rookie", "Informatique", 15000, 4000, 2000, 0.1, "images/RobotNiveau1.png"),
+    Machine("Bras Robot", "Légendaire", "Informatique", 23000, 5000, 2500, 0.084, "images/RobotNiv2.png")
 ]
 
 # Liste des machines possédées par le joueur au départ (une seule machine niveau 1)
 machines_possedees = [
-    Machine("Tour", "Apprentis", "Méchanique", 20000, 5, 3000, 0.21, "images/TourNiveau1.png")
+    Machine("Tour", "Apprenti", "Mécanique", 20000, 10000, 3000, 0.21, "images/TourNiveau1.png")
 ]
 
 # Exemple d'utilisation dans un autre fichier

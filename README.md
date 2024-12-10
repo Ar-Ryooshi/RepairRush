@@ -7,7 +7,7 @@ Repair Rush est un jeu de gestion dans lequel le joueur doit maintenir ses machi
 = adapter les données joueur entrée
 = attribution des tehchniciens et reparations machines
 = Gestion Jeu/fin de jeu, game over
-= Peut etre regler les soucis d'affichage
+= Peut etre regler les soucis d'affichage (pour le 13 maybe)
 
 
 ## Objectif
