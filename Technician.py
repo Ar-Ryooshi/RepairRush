@@ -1,232 +1,262 @@
 import customtkinter as ctk
 from PIL import Image, ImageTk
-from Technician import Technician   # Importation de la classe
 
-
-# Classe Machine
-class Machine:
-    def __init__(self, nom, niveau_machine, type_machine, cout_achat, temps_entretien, revenu_par_periode, deplet_rate, image_path):
+# Classe Technician
+class Technician:
+    def __init__(self, nom, specialite, niveau, salaire, facteur_reparation, image_path):
         self.nom = nom
-        self.niveau_machine = niveau_machine
-        self.type_machine = type_machine
-        self.cout_achat = cout_achat
-        self.temps_entretien = temps_entretien
-        self.revenu_par_periode = revenu_par_periode
-        self.deplet_rate = deplet_rate
+        self.specialite = specialite
+        self.niveau = niveau
+        self.salaire = salaire
+        self.facteur_reparation = facteur_reparation
         self.image_path = image_path
-        self.etat = 100
-        self.frame = None
-        self.image = None  # Garder une référence de l'image
-        self.technicien = None  # Initialisation à None
+        self.assigned_machine = None
+        self.machine_image_label = None
 
-    def assign_technician(self, technician):
-        """Assigne un technicien à cette machine."""
-        if self.technicien is not None:
-            print(f"Machine {self.nom} a déjà un technicien assigné.")
+    def assign_to_machine(self, machine, assign_button, joueur, tech_frame):
+        if self.assigned_machine is not None:
+            print(f"{self.nom} est déjà assigné à une machine.")
             return False
-
-        if technician.assigned_machine is not None:
-            technician.assigned_machine.technicien = None
-
-        if technician.specialite != self.type_machine:
-            print(f"{technician.nom} ne peut pas être assigné à la machine {self.nom} car il n'a pas la spécialité {self.type_machine}.")
+        if self.specialite != machine.type_machine:
+            print(f"{self.nom} ne peut pas être assigné à la machine {machine.nom} ({machine.niveau_machine}) car les types ne correspondent pas.")
             return False
+        self.assigned_machine = machine
+        machine.technicien = self
+        print(f"{self.nom} a été assigné à la machine {machine.nom} ({machine.niveau_machine}).")
+        assign_button.configure(text="Désaffecter", command=lambda: self.unassign_from_machine(assign_button, joueur))
         
-        technician.assigned_machine = self
-        self.technicien = technician
-        print(f"{technician.nom} a été assigné à la machine {self.nom}.")
+        # Charger l'image de la machine
+        machine_image = Image.open(machine.image_path).resize((20, 20))
+        machine_image = ImageTk.PhotoImage(machine_image)
+
+        # Créer ou mettre à jour l'image de la machine
+        if self.machine_image_label is None:
+            self.machine_image_label = ctk.CTkLabel(tech_frame, image=machine_image, text="")
+            self.machine_image_label.image = machine_image  # Garder une référence
+            self.machine_image_label.place(relx=1.0, rely=1.0, anchor="se")  # En bas à droite
+        else:
+            self.machine_image_label.configure(image=machine_image)
+            self.machine_image_label.image = machine_image
+
+        return True
+    
+    def unassign_from_machine(self, assign_button=None, joueur=None):
+        if self.assigned_machine is None:
+            print(f"{self.nom} n'est pas assigné à une machine.")
+            return False
+        if self.assigned_machine.en_reparation_flag:
+            print(f"{self.nom} ne peut pas être désassigné car la machine {self.assigned_machine.nom} ({self.assigned_machine.niveau_machine}) est en réparation.")
+            return False
+        print(f"{self.nom} a été désassigné de la machine {self.assigned_machine.nom} ({self.assigned_machine.niveau_machine}).")
+        self.assigned_machine.technicien = None
+        self.assigned_machine = None
+        if assign_button:
+            assign_button.configure(text="Attribuer", command=lambda: open_assign_window(self, joueur, assign_button))
+        
+        # Supprimer l'image de la machine
+        if self.machine_image_label is not None:
+            self.machine_image_label.place_forget()
+            self.machine_image_label = None
+
         return True
 
-    def unassign_technician(self):
-        if self.technicien is None:
-            print(f"Aucun technicien n'est assigné à la machine {self.nom}.")
-            return False
-        print(f"{self.technicien.nom} a été désassigné de la machine {self.nom}.")
-        self.technicien = None
-        return True
-    
-    def create_interface(self, root):
-        """Crée l'interface visuelle pour chaque machine."""
-        self.frame = ctk.CTkFrame(root, width=200, height=300, corner_radius=10)
-        self.frame.pack(pady=10, padx=10, side="left")
 
-        ctk.CTkLabel(self.frame, text=f"{self.nom} ({self.niveau_machine})", font=("Arial", 12)).pack(pady=5)
+    def engager(self, joueur):
+        if joueur.argent >= self.salaire:
+            joueur.argent -= self.salaire
+            joueur.techniciens_possedes.append(self)
+            print(f"{self.nom} engagé.")
+            return True
+        print(f"Pas assez d'argent pour engager {self.nom}.")
+        return False
 
-        # Conteneur pour l'image et la barre d'état
-        image_et_barre_frame = ctk.CTkFrame(self.frame, width=150, height=150)
-        image_et_barre_frame.pack()
+    def licencier(self, joueur):
+        if self in joueur.techniciens_possedes:
+            if self.assigned_machine is not None:
+                if self.assigned_machine.en_reparation_flag:
+                    print(f"{self.nom} ne peut pas être licencié car la machine {self.assigned_machine.nom} ({self.assigned_machine.niveau_machine}) est en réparation.")
+                    return False
+                self.unassign_from_machine(None, None)  # Désassigner de la machine
+            joueur.techniciens_possedes.remove(self)
+            print(f"{self.nom} licencié.")
+            return True
+        print(f"{self.nom} n'est pas engagé, donc ne peut pas être licencié.")
+        return False
 
-        # Charger l'image et garder la référence
-        self.image = ImageTk.PhotoImage(Image.open(self.image_path).resize((150, 150)))
-        ctk.CTkLabel(image_et_barre_frame, image=self.image, text="").grid(row=0, column=0, padx=5)
 
-        # Canvas pour la barre d'état verticale
-        self.canvas = ctk.CTkCanvas(image_et_barre_frame, width=31, height=150, bg="black")
-        self.canvas.grid(row=0, column=1, padx=5)
+# Liste des techniciens disponibles
+technicians = [
+    Technician("Rémy Tourneur", "Mécanique", "Débutant", 100, 1.25, 'images/Tech7.png'),
+    Technician("Jack Soudey", "Mécanique", "Moyen", 200, 1, 'images/Tech7.png'),
+    Technician("Claude Piston", "Mécanique", "Expert", 300, 0.75, 'images/Tech7.png'),
+    Technician("Hubert Volt", "Électrique", "Débutant", 150, 1.25, 'images/Tech7.png'),
+    Technician("Fred Fraiseuse", "Électrique", "Moyen", 250, 1, 'images/Tech7.png'),
+    Technician("Léon Laser", "Électrique", "Expert", 350, 0.75, 'images/Tech7.png'),
+    Technician("Alex Byte", "Informatique", "Débutant", 120, 1.25, 'images/Tech7.png'),
+    Technician("Lucas Pixel", "Informatique", "Moyen", 220, 1, 'images/Tech7.png'),
+    Technician("Dave Data", "Informatique", "Expert", 320, 0.75, 'images/Tech7.png')
+]
 
-        # Bouton de réparation
-        ctk.CTkButton(self.frame, text="Réparer", command=self.reparer_temps).pack(pady=10)
+# Dictionnaire pour garder une référence aux boutons d'engagement
+engagement_buttons = {}
 
-        # Initialisation de la barre d'état
-        self.update_barre()
+# Classe Joueur pour les tests
+class Joueur:
+    def __init__(self, argent):
+        self.argent = argent
+        self.techniciens_possedes = []
 
-    def degrader_etat(self):
-        """Dégrade l'état de la machine."""
-        if self.etat > 0:
-            self.etat = max(0, self.etat - self.deplet_rate)
-            self.update_barre()
+# Fonction pour mettre à jour la frame des techniciens engagés
+def update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons):
+    # Supprimer les widgets précédents
+    for widget in engaged_frame.winfo_children():
+        widget.destroy()
 
-    def degrader_etat_progressivement(self):
-        """Appelle la fonction de dégradation de manière répétée."""
-        if self.etat > 0:
-            self.degrader_etat()
-            self.frame.after(1000, self.degrader_etat_progressivement)
+    # Afficher les techniciens engagés
+    for idx, technician in enumerate(joueur.techniciens_possedes):
+        # Créer une sous-frame pour chaque technicien engagé
+        tech_frame = ctk.CTkFrame(engaged_frame, width=180, height=150, fg_color="#444444", corner_radius=10)
+        tech_frame.grid(row=0, column=idx, padx=10, pady=10)
 
-    def update_barre(self):
-        """Met à jour la barre d'état verticale."""
-        self.canvas.delete("barre")
-        height = int(self.canvas.winfo_height() * (self.etat / 100))
-        y_position = self.canvas.winfo_height() - height
-        color = self.get_color_for_etat()
-        if self.etat > 0:
-            self.canvas.create_rectangle(1, y_position, 33, self.canvas.winfo_height(), fill=color, tags="barre")
+        # Image du technicien
+        image = Image.open(technician.image_path).resize((60, 60))
+        tech_image = ImageTk.PhotoImage(image)
+        image_label = ctk.CTkLabel(tech_frame, text="", image=tech_image)
+        image_label.image = tech_image  # Garde une référence pour éviter que l'image ne soit supprimée
+        image_label.pack(pady=5)
 
-    def get_color_for_etat(self):
-        """Retourne la couleur appropriée en fonction de l'état actuel."""
-        return "green" if self.etat >= 70 else "yellow" if 30 <= self.etat < 70 else "red"
-    
-    def reparer(self):
-        """Répare la machine (remet l'état à 100%)."""
-        self.etat = 100
-        self.update_barre()
+        # Nom du technicien
+        name_label = ctk.CTkLabel(tech_frame, text=technician.nom, font=("Arial", 10))
+        name_label.pack()
 
-    def reparer_temps(self):
-        """Répare la machine après un certain temps."""
-        if self.technicien is not None:
-            self.frame.after(int(self.temps_entretien * self.technicien.facteur_reparation), self.reparer)
+        # Afficher l'image de la machine assignée (si disponible)
+        if technician.assigned_machine:
+            machine_image = Image.open(technician.assigned_machine.image_path).resize((20, 20))
+            machine_image = ImageTk.PhotoImage(machine_image)
+            machine_label = ctk.CTkLabel(tech_frame, image=machine_image, text="")
+            machine_label.image = machine_image  # Garder une référence à l'image
+            machine_label.place(relx=1.0, rely=1.0, anchor="se")  # Position en bas à droite
+
+        # Bouton d'assignation/désassignation
+        assign_button = ctk.CTkButton(tech_frame, font=("Arial", 10))
+
+        if technician.assigned_machine is None:
+            # Le technicien n'est pas assigné
+            assign_button.configure(
+                text="Attribuer",
+                command=lambda tech=technician, btn=assign_button: open_assign_window(tech, joueur, btn)
+            )
         else:
-            print("Aucun technicien assigné à cette machine.")
-    
-    def en_reparation(self):
-        """Suspend les revenus pendant la réparation de la machine."""
-        if not hasattr(self, 'en_reparation_flag'):
-            self.en_reparation_flag = False  # Ajoute un indicateur de réparation à l'instance
+            # Le technicien est déjà assigné
+            assign_button.configure(
+                text="Désaffecter",
+                command=lambda tech=technician, btn=assign_button: tech.unassign_from_machine(btn, joueur)
+            )
 
-        # Si déjà en réparation, ne rien faire
-        if self.en_reparation_flag:
-            return
+        assign_button.pack(pady=5)
 
-        self.en_reparation_flag = True  # Drapeau pour indiquer que la machine est en réparation
+        # Bouton pour licencier le technicien
+        def licencier_technicien(tech=technician):
+            if tech.licencier(joueur):
+                argent_label.configure(text=f"Argent : {joueur.argent} €")
+                update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons)
+                # Réactiver le bouton d'engagement
+                if tech in engagement_buttons:
+                    engagement_buttons[tech].configure(state="normal")
 
-        # Arrêter les revenus
-        revenus_avant_reparation = self.revenu_par_periode
-        self.revenu_par_periode = 0
+        fire_button = ctk.CTkButton(tech_frame, text="Licencier", font=("Arial", 10), command=licencier_technicien)
+        fire_button.pack(pady=5)
 
-        # Lancer la réparation
-        if self.technicien is not None:
-            self.frame.after(self.temps_entretien * self.technicien.facteur_reparation, self.finir_reparation, revenus_avant_reparation)
-        else:
-            print("Aucun technicien assigné à cette machine.")
 
-    def finir_reparation(self, revenus_avant_reparation):
-        """Réactive les revenus après la fin de la réparation."""
-        self.en_reparation_flag = False  # Réinitialiser le drapeau
-        self.revenu_par_periode = revenus_avant_reparation  # Restaurer les revenus
-        self.reparer()  # Remettre l'état de la machine à 100%
-        if self.technicien is not None:
-            self.technicien.unassign_from_machine()
-            self.technicien = None
 
-    def baisse_revenu(self):
-        # Simule la baisse de revenu de la machine en fonction de l'état
-        if self.etat >= 70:
-            baisse_revenu = self.revenu_par_periode
-            return baisse_revenu
-        if 30 <= self.etat < 70:
-            baisse_revenu = self.revenu_par_periode * 0.7
-            return baisse_revenu
-        if self.etat < 30:
-            baisse_revenu = self.revenu_par_periode * 0.5
-            return baisse_revenu
-        if self.etat == 0:
-            return baisse_revenu == 0
-
-# Classe InterfaceGraphique
-class InterfaceGraphique:
-    def __init__(self, frame, machines_possedees):
-        self.frame = frame
-        self.frame.configure(corner_radius=0)
-        self.machines = machines_possedees
-        self.create_machines_interface()
-        # Assure que la dégradation est démarrée après la création de l'interface
-        self.start_degradation()
-
-    def create_machines_interface(self):
-        """Crée l'interface des machines."""
-        for machine in self.machines:
-            machine.create_interface(self.frame)
-            machine.update_barre()  # S'assure que chaque barre est mise à jour à 100 %
-
-    def update_interface(self, machines_possedees):
-        """Met à jour l'interface en recréant les widgets des machines possédées."""
-        # Supprime les widgets existants
-        for widget in self.frame.winfo_children():
-            widget.destroy()
-        
-        # Met à jour la liste des machines et recrée l'interface
-        self.machines = machines_possedees
-        self.create_machines_interface()
-        
-        # Assure que la dégradation est démarrée après la mise à jour de l'interface
-        self.start_degradation()
-
-    def start_degradation(self):
-        """Lance la dégradation progressive des machines."""
-        for machine in self.machines:
-            machine.degrader_etat_progressivement()
-            
-def acheter_machine(machine, joueur, argent_value, scrollable_frame, interface_machines):
-    """Permet d'acheter une machine si le joueur a suffisamment d'argent."""
-    if machine in machines_disponibles and joueur.argent >= machine.cout_achat:
-        joueur.argent -= machine.cout_achat
-
-        # Ajouter la machine à la liste des machines possédées et la retirer des disponibles
-        machines_possedees.append(machine)
-        machines_disponibles.remove(machine)
-
-        # Mise à jour de l'affichage de l'argent du joueur
-        argent_value.configure(text=f"Argent : {joueur.argent} €")
-
-        # Mise à jour de l'interface des machines possédées et disponibles
-        interface_machines.update_interface(machines_possedees)
-
-        print(f"Machine {machine.nom} achetée.")
+# Fonction pour engager un technicien
+def engager_technicien(technicien, joueur, argent_value, engaged_frame, engagement_buttons, button):
+    # Logique pour engager un technicien et mettre à jour l'interface
+    if len(joueur.techniciens_possedes) < 6 and technicien not in joueur.techniciens_possedes:  # Maximum de 6 techniciens et empêcher double engagement
+        if technicien.engager(joueur):
+            argent_value.configure(text=f"Argent : {joueur.argent} €")
+            update_engaged_frame(engaged_frame, joueur, argent_value, engagement_buttons)  # Mettre à jour la frame des techniciens engagés
+            button.configure(state="disabled")  # Désactiver le bouton après engagement
     else:
-        print("Pas assez d'argent pour acheter cette machine.")
-# Liste des machines disponibles à l'achat
-machines_disponibles = [
-    Machine("Tour", "Maître", "Mécanique", 25000, 6000, 3500, 0.165, "images/TourNiveau2.png"),
-    Machine("CNC", "Artisan", "Électrique", 30000, 7000, 4000, 0.135, "images/CNCNiveau1.png"),
-    Machine("CNC", "Virtuose", "Électrique", 35000, 9000, 4500, 0.12, "images/CNCNiveau2.png"),
-    Machine("Bras Robot", "Rookie", "Informatique", 15000, 4000, 2000, 0.1, "images/RobotNiveau1.png"),
-    Machine("Bras Robot", "Légendaire", "Informatique", 23000, 5000, 2500, 0.084, "images/RobotNiv2.png")
-]
+        print("Nombre maximum de techniciens atteint ou technicien déjà engagé!")
 
-# Liste des machines possédées par le joueur au départ (une seule machine niveau 1)
-machines_possedees = [
-    Machine("Tour", "Apprentis", "Mécanique", 20000, 10000, 3000, 0.21, "images/TourNiveau1.png")
-]
+# Fonction pour ouvrir une fenêtre d'assignation
+def open_assign_window(technician, joueur, assign_button):
+    from Machines import machines_possedees  # Import local pour éviter les importations circulaires
+    assign_window = ctk.CTkToplevel()
+    assign_window.title("Attribuer un technicien à une machine")
+    assign_window.geometry("400x300")
+
+    ctk.CTkLabel(assign_window, text=f"Attribuer {technician.nom} à une machine", font=("Arial", 14)).pack(pady=10)
+
+    for machine in machines_possedees:
+        machine_button = ctk.CTkButton(assign_window, text=f"{machine.nom} ({machine.niveau_machine})", command=lambda m=machine: assign_technician_to_machine(technician, m, assign_window, assign_button, joueur, tech_frame=None))
+        machine_button.pack(pady=5)
+
+    def assign_technician_to_machine(technician, machine, window, assign_button, joueur, tech_frame):
+        if machine.technicien is not None:
+            print(f"Impossible d'assigner {technician.nom} à la machine {machine.nom} ({machine.niveau_machine}). La machine est déjà occupée.")
+            return
+        
+        if technician.assign_to_machine(machine, assign_button, joueur, tech_frame):
+            print(f"{technician.nom} a été assigné à la machine {machine.nom} ({machine.niveau_machine}).")
+            assign_button.configure(
+                text="Désaffecter",
+                command=lambda tech=technician, btn=assign_button: tech.unassign_from_machine(btn, joueur)
+            )
+            window.destroy()
+        else:
+            print(f"Impossible d'assigner {technician.nom} à la machine {machine.nom} ({machine.niveau_machine}).")
 
 # Exemple d'utilisation dans un autre fichier
 if __name__ == "__main__":
     root = ctk.CTk()
     root.geometry("1380x800")
 
-    # Création d'un cadre pour les machines dans l'interface principale
-    machines_frame = ctk.CTkFrame(root, width=1380, height=300)
-    machines_frame.place(x=0, y=250)
+    joueur = Joueur(argent=1000)
 
-    # Initialiser l'interface des machines dans le cadre
-    interface = InterfaceGraphique(machines_frame, machines_possedees)
+    # Création d'un cadre pour les techniciens dans l'interface principale
+    techniciens_frame = ctk.CTkFrame(root, width=1380, height=300)
+    techniciens_frame.place(x=0, y=0)
+
+    argent_label = ctk.CTkLabel(root, text=f"Argent : {joueur.argent} €", font=("Arial", 14))
+    argent_label.place(x=10, y=310)
+
+    engagement_buttons = {}
+
+    for idx, technician in enumerate(technicians):
+        tech_frame = ctk.CTkFrame(techniciens_frame, width=180, height=150, fg_color="#444444", corner_radius=10)
+        tech_frame.grid(row=0, column=idx, padx=10, pady=10)
+
+        # Image du technicien
+        image = Image.open(technician.image_path).resize((60, 60))
+        tech_image = ImageTk.PhotoImage(image)
+        image_label = ctk.CTkLabel(tech_frame, text="", image=tech_image)
+        image_label.image = tech_image  # Garde une référence pour éviter que l'image ne soit supprimée
+        image_label.pack(pady=5)
+
+        # Nom du technicien
+        name_label = ctk.CTkLabel(tech_frame, text=technician.nom, font=("Arial", 10))
+        name_label.pack()
+
+        # Bouton d'action (Engager)
+        action_button = ctk.CTkButton(tech_frame, text="Engager")
+        action_button.pack(pady=5)
+
+        # Ajouter le bouton au dictionnaire pour pouvoir le réactiver plus tard
+        engagement_buttons[technician] = action_button
+
+        # Fonction pour engager le technicien
+        def engager_technicien(tech=technician, button=action_button):
+            if len(joueur.techniciens_possedes) < 6 and tech not in joueur.techniciens_possedes:  # Maximum de 6 techniciens et empêcher double engagement
+                if tech.engager(joueur):
+                    argent_label.configure(text=f"Argent : {joueur.argent} €")
+                    update_engaged_frame(techniciens_frame, joueur, argent_label, engagement_buttons)  # Mettre à jour la frame des techniciens engagés
+                    button.configure(state="disabled")  # Désactiver le bouton après engagement
+            else:
+                print("Nombre maximum de techniciens atteint ou technicien déjà engagé!")
+
+        # Assigner la fonction d'engagement au bouton
+        action_button.configure(command=lambda t=technician, b=action_button: engager_technicien(t, b))
 
     root.mainloop()
