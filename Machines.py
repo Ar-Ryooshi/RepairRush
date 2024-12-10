@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from PIL import Image, ImageTk
 from Technician import Technician   # Importation de la classe
+from customtkinter import CTkImage
 
 
 # Classe Machine
@@ -19,6 +20,7 @@ class Machine:
         self.image = None  # Garder une référence de l'image
         self.technicien = None  # Initialisation à None
         self.en_reparation_flag = False  # Indicateur de réparation
+        self.marteau_image_label = None
 
     def assign_technician(self, technician):
         """Assigne un technicien à cette machine."""
@@ -119,11 +121,25 @@ class Machine:
         self.en_reparation_flag = True
         print(f"Réparation de la machine {self.nom} ({self.niveau_machine}) commencée.")
 
+        # Charger l'image du marteau
+        marteau_image = CTkImage(Image.open('images/marteau.png').resize((30, 30)))
+
+        # Ajouter l'image du marteau au-dessus de l'image de la machine
+        if self.marteau_image_label is None:
+            self.marteau_image_label = ctk.CTkLabel(self.frame, image=marteau_image, text="")
+            self.marteau_image_label.place(relx=0.8, rely=0.0, anchor='n')  # Positionner au-dessus de l'image de la machine
+        else:
+            self.marteau_image_label.configure(image=marteau_image)
+            self.marteau_image_label.place(relx=0.8, rely=0.0, anchor='n')
 
     def stop_repair(self):
         """Arrête la réparation de la machine."""
         self.en_reparation_flag = False
         print(f"Réparation de la machine {self.nom} ({self.niveau_machine}) terminée.")
+
+        # Masquer l'image du marteau
+        if self.marteau_image_label is not None:
+            self.marteau_image_label.place_forget()
 
     def baisse_revenu(self):
         # Simule la baisse de revenu de la machine en fonction de l'état
