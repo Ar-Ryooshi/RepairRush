@@ -200,10 +200,13 @@ def engager_technicien(technicien, joueur, engaged_frame, argent_label, engageme
             manager.ajouter_notification("Nombre maximum de techniciens atteint ou technicien déjà engagé!")
 
 def open_assign_window(technician, joueur, assign_button):
-    from .Machines2 import machines_possedees  # Import local pour éviter les importations circulaires
+    from .Machines import machines_possedees  # Import local pour éviter les importations circulaires
     assign_window = ctk.CTkToplevel()
     assign_window.title("Attribuer un technicien à une machine")
     assign_window.geometry("400x300")
+    assign_window.transient()  # Attache la fenêtre au parent
+    assign_window.grab_set()  # Bloque les interactions avec la fenêtre principale
+    assign_window.focus_force()  # Donne le focus à la fenêtre contextuelle
 
     ctk.CTkLabel(assign_window, text=f"Attribuer {technician.nom} à une machine", font=("Arial", 14)).pack(pady=10)
 

@@ -182,7 +182,7 @@ def engager_technicien(technicien, joueur, argent_value, engaged_frame, engageme
 
 # Fonction pour ouvrir une fenêtre d'assignation
 def open_assign_window(technician, joueur, assign_button):
-    from Machines import machines_possedees  # Import local pour éviter les importations circulaires
+    from modules.Machines2 import machines_possedees  # Import local pour éviter les importations circulaires
     assign_window = ctk.CTkToplevel()
     assign_window.title("Attribuer un technicien à une machine")
     assign_window.geometry("400x300")

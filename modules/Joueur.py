@@ -1,4 +1,4 @@
-from modules.Machines2 import machines_disponibles, machines_possedees
+from modules.Machines import machines_disponibles, machines_possedees
 import customtkinter as ctk
 from PIL import Image, ImageTk
 from NotificationsManager import get_global_notifications_manager

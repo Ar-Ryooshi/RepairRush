@@ -1,6 +1,6 @@
 from PIL import Image, ImageTk
 import customtkinter as ctk
-from modules.Machines import machines_possedees, InterfaceGraphique
+from modules.Machines2 import machines_possedees, InterfaceGraphique
 from modules.Technician import technicians
 from modules.Joueur import Joueur, creer_labels_profil
 import pickle

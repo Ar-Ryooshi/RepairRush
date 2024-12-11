@@ -2,7 +2,7 @@ import customtkinter as ctk
 from customtkinter import CTk
 import time
 from PIL import Image, ImageTk
-from modules.Machines2 import Machine, machines_disponibles,machines_possedees, InterfaceGraphique, acheter_machine
+from modules.Machines import Machine, machines_disponibles,machines_possedees, InterfaceGraphique, acheter_machine
 from modules.Technician import Technician, technicians, engagement_buttons, update_engaged_frame, engager_technicien
 # from sound_manager import SoundManager
 from modules.Joueur import Joueur, creer_labels_profil
@@ -30,9 +30,7 @@ partie_frame = ctk.CTkFrame(root, width=1500, height=900, fg_color="#E8C36A")
 son_frame = ctk.CTkFrame(root, width=1500, height=900, fg_color="#E8C36A")
 profil_frame = ctk.CTkFrame(root, width=1500, height=900, fg_color="#E8C36A")
 machines_frame = ctk.CTkFrame(menu_principal_frame, width=1380, height=300)
-machines_frame.place(x=10, y=800)
-main_page_frame = ctk.CTkFrame(root, width=1024, height=576)
-main_page_frame.place(relwidth=1, relheight=1)
+machines_frame.place(x=10, y=760)
 
 
 for frame in (menu_principal_frame, parametres_frame, partie_frame, son_frame, profil_frame):
@@ -341,8 +339,6 @@ back_button.place(x=800, y=20)
 #endregion
 
 #region --- INTERFACE DES MACHINES ---
-machines_frame = ctk.CTkFrame(menu_principal_frame, width=1380, height=300)
-machines_frame.place(x=10, y=800)
 interface_machines = InterfaceGraphique(machines_frame, machines_possedees)
 #endregion
 # Lancer la barre de progression
