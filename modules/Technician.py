@@ -171,11 +171,20 @@ def update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons
         assign_button.pack(pady=5)
 
         def licencier_technicien(tech=technician):
-            if tech.licencier(joueur):
-                argent_label.configure(text=f"{joueur.argent}")
+            if tech in joueur.techniciens_possedes:
+                if tech.assigned_machine is not None:
+                    if tech.assigned_machine.en_reparation_flag:
+                        print(f"{tech.nom} ne peut pas être licencié car la machine {tech.assigned_machine.nom} ({tech.assigned_machine.niveau_machine}) est en réparation.")
+                        return False
+                    tech.unassign_from_machine(None, None)  # Désassigner de la machine
+                joueur.techniciens_possedes.remove(tech)
                 update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons)
                 # Réactiver le bouton d'engagement
                 engagement_buttons[tech].configure(state="normal")
+                print(f"{tech.nom} licencié.")
+                return True
+            print(f"{tech.nom} n'est pas engagé, donc ne peut pas être licencié.")
+            return False
 
         fire_button = ctk.CTkButton(tech_frame, text="Licencier", font=("Arial", 10), command=licencier_technicien)
         fire_button.pack(pady=5)

@@ -11,7 +11,7 @@ import tkinter.messagebox as messagebox
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 # sound_manager = SoundManager()
-joueur = Joueur(nom="Mr Boss", entreprise="Boss International",photo= "images/Profil1.png")
+
 
 # Fenêtre principale
 root = ctk.CTk()
@@ -23,7 +23,7 @@ root.after(100, lambda: root.state('zoomed'))
 
 
 #region Créer les différents frames
-
+joueur = Joueur(nom="Mr Boss", entreprise="Boss International",photo= "images/Profil1.png")
 menu_principal_frame = ctk.CTkFrame(root, width=1500, height=900)
 parametres_frame = ctk.CTkFrame(root, width=1500, height=900, fg_color="#E8C36A")
 partie_frame = ctk.CTkFrame(root, width=1500, height=900, fg_color="#E8C36A")
