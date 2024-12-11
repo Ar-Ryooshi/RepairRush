@@ -1,173 +1,200 @@
 from PIL import Image, ImageTk
 import customtkinter as ctk
-from modules.Machines2 import machines_possedees, InterfaceGraphique
-from modules.Technician import technicians
-from modules.Joueur import Joueur, creer_labels_profil
+from tkinter import messagebox
 import pickle
-import os
-import tkinter.messagebox as messagebox
 
 # Configuration de la fenêtre principale
 root = ctk.CTk()
 root.geometry("1024x576")
 root.title("Repair Rush")
 
-# Dossier et fichier de sauvegarde
-SAVE_DIR = "save"
-SAVE_FILE = os.path.join(SAVE_DIR, "sauvegarde.pkl")
-
 # Variables globales
+SAVE_FILE = "save/sauvegarde.pkl"
+current_step = 0
+tutorial_steps = [
+    {"text": "Bienvenue dans Repair Rush !", "color": "yellow"},
+    {"text": "Votre but est de gérer des machines et techniciens pour maximiser vos profits.", "color": "orange"},
+    {"text": "Planifiez, entretenez et réparez vos machines avant qu'elles ne tombent en panne !", "color": "red"}
+]
 player_data = {"nom": "", "entreprise": "", "photo": ""}
-images_cache = {}  # Pour éviter le garbage collection des images
+machines_possedees = []
+technicians = []
+joueur = None
 
-# Vérifier la présence d'une sauvegarde
+# Vérifier sauvegarde
 def verifier_sauvegarde():
-    return os.path.exists(SAVE_FILE)
+    try:
+        with open(SAVE_FILE, "rb"):
+            return True
+    except FileNotFoundError:
+        return False
 
-# Sauvegarder les données actuelles
+# Sauvegarder les données
 def sauvegarder_donnees():
-    if not os.path.exists(SAVE_DIR):
-        os.makedirs(SAVE_DIR)
-    data = {
-        "player_data": player_data,
-        "machines": machines_possedees,
-        "technicians": technicians,
-    }
-    with open(SAVE_FILE, "wb") as f:
-        pickle.dump(data, f)
-    messagebox.showinfo("Sauvegarde", "Données sauvegardées avec succès.")
+    try:
+        # Collecter les données à sauvegarder
+        data = {
+            "player_data": player_data,
+            "machines": machines_possedees,
+            "technicians": technicians,
+            "joueur": joueur.__dict__ if joueur else None,  # Sauvegarder les attributs de l'objet joueur
+        }
+        
+        # Sauvegarder les données dans un fichier pickle
+        with open(SAVE_FILE, "wb") as f:
+            pickle.dump(data, f)
+        
+        print("Données sauvegardées avec succès.")
+        messagebox.showinfo("Sauvegarde", "Données sauvegardées avec succès.")
+    except Exception as e:
+        print(f"Erreur lors de la sauvegarde des données : {e}")
+        messagebox.showerror("Erreur", f"Erreur lors de la sauvegarde des données : {e}")
 
-# Charger les données et lancer l'interface
+# Charger partie
 def charger_partie():
     if verifier_sauvegarde():
-        with open(SAVE_FILE, "rb") as f:
-            data = pickle.load(f)
-        global player_data, machines_possedees, technicians
-        player_data.update(data["player_data"])
-        machines_possedees.clear()
-        machines_possedees.extend(data["machines"])
-        technicians.clear()
-        technicians.extend(data["technicians"])
-        creer_interface_jeu()
+        try:
+            with open(SAVE_FILE, "rb") as f:
+                data = pickle.load(f)
+            
+            global player_data, machines_possedees, technicians, joueur
+            player_data.update(data["player_data"])
+            machines_possedees.clear()
+            machines_possedees.extend(data["machines"])
+            technicians.clear()
+            technicians.extend(data["technicians"])
+            
+            # Restaurer les attributs de l'objet joueur
+            if data["joueur"]:
+                joueur.__dict__.update(data["joueur"])
+            
+            print("Données chargées avec succès.")
+            creer_interface_jeu()
+        except Exception as e:
+            print(f"Erreur lors du chargement des données : {e}")
+            messagebox.showerror("Erreur", f"Erreur lors du chargement des données : {e}")
+    else:
+        messagebox.showerror("Erreur", "Aucune sauvegarde trouvée.")
 
-# Fenêtre de dialogue (Notifications)
+# Nouvelle partie
+def nouvelle_partie():
+    afficher_tutoriel()
 
-# Interface principale du jeu
-def creer_interface_jeu():
+# Quitter jeu
+def quitter_jeu():
+    root.destroy()
+
+# Afficher tutoriel
+def afficher_tutoriel():
+    global current_step
     for widget in root.winfo_children():
         widget.destroy()
 
-    frame = ctk.CTkFrame(root)
-    frame.pack(fill="both", expand=True)
+    if current_step < len(tutorial_steps):
+        step = tutorial_steps[current_step]
+        text_label = ctk.CTkLabel(root, text=step["text"], font=("Arial", 20, "bold"), fg_color=step["color"], corner_radius=10)
+        text_label.pack(pady=50)
+        next_button = ctk.CTkButton(root, text="→ Suivant", command=lambda: avancer_tutoriel(), width=150)
+        next_button.pack(pady=20)
+    else:
+        demander_nom()
 
-    joueur_instance = Joueur(player_data["nom"], player_data["entreprise"], player_data["photo"])
-    creer_labels_profil(frame, joueur_instance, selected_currency="€")
+# Avancer tutoriel
+def avancer_tutoriel():
+    global current_step
+    current_step += 1
+    afficher_tutoriel()
 
-    # Scrollable Frame pour machines
-
-    # Machines Frame
-    machines_frame = ctk.CTkFrame(frame, width=1380, height=300)
-    machines_frame.place(x=10, y=800)
-    InterfaceGraphique(machines_frame, machines_possedees)
-
-    # Boutons d'action
-    ctk.CTkButton(frame, text="Sauvegarder", command=sauvegarder_donnees).pack(side="bottom", pady=10)
-    ctk.CTkButton(frame, text="Quitter", command=root.quit).pack(side="bottom", pady=10)
-
-# Afficher l'écran d'accueil
-def creer_ecran_accueil():
+# Demander nom
+def demander_nom():
     for widget in root.winfo_children():
         widget.destroy()
+    label = ctk.CTkLabel(root, text="Entrez votre nom :", font=("Arial", 20))
+    label.pack(pady=20)
+    entry = ctk.CTkEntry(root)
+    entry.pack(pady=10)
+    error_label = ctk.CTkLabel(root, text="", font=("Arial", 12), text_color="red")
+    error_label.pack(pady=5)
+    next_button = ctk.CTkButton(root, text="Suivant", command=lambda: valider_nom(entry, error_label), width=150)
+    next_button.pack(pady=20)
 
-    # Fond d'écran
-    try:
-        bg_image = Image.open("images/Backg.jpg").resize((1024, 576))
-        bg_image_tk = ImageTk.PhotoImage(bg_image)
-        background_label = ctk.CTkLabel(root, image=bg_image_tk, text="")
-        background_label.image = bg_image_tk
-        background_label.place(relwidth=1, relheight=1)
-    except FileNotFoundError:
-        print("Erreur : L'image de fond n'a pas été trouvée.")
+def valider_nom(entry, error_label):
+    nom_joueur = entry.get().strip()
+    if len(nom_joueur) < 3:
+        error_label.configure(text="Le nom doit contenir au moins 3 caractères !")
+    else:
+        player_data["nom"] = nom_joueur
+        demander_entreprise()
 
-    # Titre et boutons
-    title_label = ctk.CTkLabel(root, text="Repair Rush", font=("Arial", 50, "bold"))
-    title_label.pack(pady=100)
-    play_button = ctk.CTkButton(root, text="Jouer", command=creer_ecran_choix_partie, font=("Arial", 20), width=300)
-    play_button.pack(pady=20)
-    quit_button = ctk.CTkButton(root, text="Quitter", command=root.quit, font=("Arial", 20), width=300)
-    quit_button.pack(pady=20)
-
-# Écran de choix entre nouvelle partie et chargement
-def creer_ecran_choix_partie():
+# Demander entreprise
+def demander_entreprise():
     for widget in root.winfo_children():
         widget.destroy()
+    label = ctk.CTkLabel(root, text="Entrez le nom de votre entreprise :", font=("Arial", 20))
+    label.pack(pady=20)
+    entry = ctk.CTkEntry(root)
+    entry.pack(pady=10)
+    error_label = ctk.CTkLabel(root, text="", font=("Arial", 12), text_color="red")
+    error_label.pack(pady=5)
+    next_button = ctk.CTkButton(root, text="Suivant", command=lambda: valider_entreprise(entry, error_label), width=150)
+    next_button.pack(pady=20)
 
-    ctk.CTkLabel(root, text="Choisissez une option :", font=("Arial", 20)).pack(pady=20)
-    new_game_button = ctk.CTkButton(root, text="Nouvelle Partie", command=demander_nom, font=("Arial", 20), width=300)
-    new_game_button.pack(pady=10)
+def valider_entreprise(entry, error_label):
+    nom_entreprise = entry.get().strip()
+    if len(nom_entreprise) < 3:
+        error_label.configure(text="Le nom doit contenir au moins 3 caractères !")
+    else:
+        player_data["entreprise"] = nom_entreprise
+        choisir_photo_profil()
+
+# Choisir photo profil
+def choisir_photo_profil():
+    for widget in root.winfo_children():
+        widget.destroy()
+    label = ctk.CTkLabel(root, text="Choisissez une photo de profil :", font=("Arial", 20))
+    label.pack(pady=10)
+    images = ["images/profil1.png", "images/profil2.png", "images/profil3.png", "images/profil4.png", "images/profil5.png", "images/profil6.png"]
+    for img_path in images:
+        img = ImageTk.PhotoImage(Image.open(img_path).resize((100, 100)))
+        button = ctk.CTkButton(root, image=img, text="", command=lambda path=img_path: lancer_partie(path))
+        button.image = img
+        button.pack(side="left", padx=10)
+
+# Lancer partie
+def lancer_partie(photo_path):
+    player_data["photo"] = photo_path
+    sauvegarder_donnees()
+    root.destroy()
+
+# Afficher écran options
+def afficher_ecran_options():
+    for widget in root.winfo_children():
+        widget.destroy()
+    bg_label = ctk.CTkLabel(root, image=bg_image_tk, text="")
+    bg_label.place(relwidth=1, relheight=1)
+    options_label = ctk.CTkLabel(root, text="Repair Rush", font=("Arial", 50, "bold"), fg_color="transparent")
+    options_label.pack(pady=100)
+    new_game_button = ctk.CTkButton(root, text="Nouvelle Partie", command=nouvelle_partie, font=("Arial", 20), width=300)
+    new_game_button.pack(pady=20)
     load_game_button = ctk.CTkButton(
         root, text="Charger Partie", command=charger_partie, font=("Arial", 20), width=300,
         state="normal" if verifier_sauvegarde() else "disabled"
     )
-    load_game_button.pack(pady=10)
-    back_button = ctk.CTkButton(root, text="Retour", command=creer_ecran_accueil, font=("Arial", 20), width=300)
-    back_button.pack(pady=10)
+    load_game_button.pack(pady=20)
+    quit_button = ctk.CTkButton(root, text="Quitter", command=quitter_jeu, font=("Arial", 20), width=300)
+    quit_button.pack(pady=20)
 
-# Demander le nom du joueur
-def demander_nom():
-    for widget in root.winfo_children():
-        widget.destroy()
+# Charger image de fond
+background_image = Image.open("images/Backg.jpg").resize((1024, 576))
+bg_image_tk = ImageTk.PhotoImage(background_image)
+background_label = ctk.CTkLabel(root, image=bg_image_tk, text="")
+background_label.place(relwidth=1, relheight=1)
+title_label = ctk.CTkLabel(root, text="Repair Rush", font=("Arial", 50, "bold"))
+title_label.pack(pady=100)
+play_button = ctk.CTkButton(root, text="Jouer", command=afficher_ecran_options, font=("Arial", 20), width=300)
+play_button.pack(pady=20)
+quit_button = ctk.CTkButton(root, text="Quitter", command=quitter_jeu, font=("Arial", 20), width=300)
+quit_button.pack(pady=20)
+background_label.lower()
 
-    ctk.CTkLabel(root, text="Entrez votre nom :", font=("Arial", 20)).pack(pady=20)
-    nom_entry = ctk.CTkEntry(root)
-    nom_entry.pack(pady=10)
-
-    ctk.CTkLabel(root, text="Nom de l'entreprise :", font=("Arial", 20)).pack(pady=20)
-    entreprise_entry = ctk.CTkEntry(root)
-    entreprise_entry.pack(pady=10)
-
-    error_label = ctk.CTkLabel(root, text="", font=("Arial", 12), text_color="red")
-    error_label.pack(pady=5)
-
-    def valider_nom():
-        nom = nom_entry.get().strip()
-        entreprise = entreprise_entry.get().strip()
-        if len(nom) < 3 or len(entreprise) < 3:
-            error_label.configure(text="Nom et entreprise doivent avoir au moins 3 caractères.")
-        else:
-            player_data["nom"] = nom
-            player_data["entreprise"] = entreprise
-            choisir_photo_profil()
-
-    ctk.CTkButton(root, text="Suivant", command=valider_nom, font=("Arial", 20)).pack(pady=20)
-
-# Choisir la photo de profil
-def choisir_photo_profil():
-    for widget in root.winfo_children():
-        widget.destroy()
-
-    ctk.CTkLabel(root, text="Choisissez une photo de profil :", font=("Arial", 20)).pack(pady=10)
-    images = [f"images/Profil{i}.png" for i in range(1, 7)]
-    frame = ctk.CTkFrame(root)
-    frame.pack(pady=20)
-
-    for img_path in images:
-        try:
-            img = Image.open(img_path).resize((100, 100))
-            img_tk = ImageTk.PhotoImage(img)
-            images_cache[img_path] = img_tk
-            btn = ctk.CTkButton(frame, image=img_tk, text="", command=lambda path=img_path: pre_lancer_jeu(path))
-            btn.pack(side="left", padx=10)
-        except FileNotFoundError:
-            print(f"Erreur : L'image {img_path} est introuvable.")
-
-# Préparer avant de lancer le jeu
-def pre_lancer_jeu(photo_path):
-    player_data["photo"] = photo_path
-    creer_interface_jeu()
-
-# Lancer l'écran d'accueil
-creer_ecran_accueil()
-
-# Boucle principale de l'application
 root.mainloop()
