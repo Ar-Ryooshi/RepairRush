@@ -1,6 +1,7 @@
 from PIL import Image, ImageTk
 import customtkinter as ctk
-import os
+from tkinter import messagebox
+import pickle
 
 # Configuration de la fenêtre principale
 root = ctk.CTk()
@@ -8,6 +9,7 @@ root.geometry("1024x576")
 root.title("Repair Rush")
 
 # Variables globales
+SAVE_FILE = "save/sauvegarde.pkl"
 current_step = 0
 tutorial_steps = [
     {"text": "Bienvenue dans Repair Rush !", "color": "yellow"},
@@ -18,7 +20,11 @@ player_data = {"nom": "", "entreprise": "", "photo": ""}
 
 # Vérifier sauvegarde
 def verifier_sauvegarde():
-    return os.path.exists("save/sauvegarde.pkl")
+    try:
+        with open(SAVE_FILE, "rb"):
+            return True
+    except FileNotFoundError:
+        return False
 
 # Nouvelle partie
 def nouvelle_partie():
@@ -27,8 +33,22 @@ def nouvelle_partie():
 # Charger partie
 def charger_partie():
     if verifier_sauvegarde():
-        os.system("start python Interface.py --charger")
-        root.destroy()
+        with open(SAVE_FILE, "rb") as f:
+            data = pickle.load(f)
+        
+        global player_data, machines_possedees, technicians, joueur
+        player_data.update(data["player_data"])
+        machines_possedees.clear()
+        machines_possedees.extend(data["machines"])
+        technicians.clear()
+        technicians.extend(data["technicians"])
+        
+        # Restaurer les attributs de l'objet joueur
+        joueur.__dict__.update(data["joueur"])
+        
+        creer_interface_jeu()
+    else:
+        messagebox.showerror("Erreur", "Aucune sauvegarde trouvée.")
 
 # Quitter jeu
 def quitter_jeu():
