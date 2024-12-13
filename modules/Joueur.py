@@ -4,7 +4,7 @@ from PIL import Image, ImageTk
 from NotificationsManager import get_global_notifications_manager
 
 class Joueur:
-    def __init__(self, nom, entreprise, photo, argent=100000):
+    def __init__(self, nom, entreprise, photo, argent=1000000):
         self.nom = nom
         self.entreprise = entreprise
         self.photo = photo
@@ -12,7 +12,8 @@ class Joueur:
         self._jour_actuel = 1
         self.machines_possedees = machines_possedees  # Initialiser avec les machines de départ
         self.techniciens_possedes = []
-        self._ui_update_callback = None  # Pour définir une méthode de mise à jour UI
+        self._ui_update_callback = None
+        self.compteur_appels = 0  # Pour définir une méthode de mise à jour UI
 
     @property
     def argent(self):
@@ -54,7 +55,13 @@ class Joueur:
             self._ui_update_callback()
 
     def incrementer_jour(self):
-        self.jour_actuel += 1
+        self.compteur_appels += 1
+        if self.compteur_appels >= 4:
+            self.jour_actuel += 1
+            print(f"Jour actuel : {self.jour_actuel}")
+            self.compteur_appels = 0  # Réinitialiser le compteur après incrémentation
+            self.trigger_ui_update()  # Mettre à jour l'interface si nécessaire
+
 
     def ajouter_revenu(self):
         self.argent += self.revenu
@@ -128,6 +135,7 @@ def creer_labels_profil(root, joueur, selected_currency, image_path="images/Prof
         labels["entreprise"].configure(text=f"{joueur.entreprise}")
         labels["argent"].configure(text=f"{int(joueur.argent)} {selected_currency}")
         labels["revenu"].configure(text=f"{joueur.revenu} {selected_currency}")
+        labels["jour_actuel"].configure(text=f"{joueur.jour_actuel}")  # Mise à jour du jour actuel
         labels["couts_fixes"].configure(text=f"{joueur.couts_fixes} {selected_currency}")
         labels["solde_net"].configure(text=f"{joueur.solde_net} {selected_currency}")
 

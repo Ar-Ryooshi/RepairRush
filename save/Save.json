@@ -1,0 +1,33 @@
+{
+    "player_data": {
+        "nom": "mlkml",
+        "entreprise": "mlkm",
+        "photo": "images/Profil6.png"
+    },
+    "machines_possedees": [
+        {
+            "nom": "Tour",
+            "niveau": "Apprenti"
+        },
+        {
+            "nom": "Tour",
+            "niveau": "Ma\u00eetre"
+        },
+        {
+            "nom": "CNC",
+            "niveau": "Artisan"
+        }
+    ],
+    "techniciens_possedes": [
+        "R\u00e9my Tourneur",
+        "Hubert Volt",
+        "Alex Byte"
+    ],
+    "joueur": {
+        "nom": "mlkml",
+        "entreprise": "mlkm",
+        "photo": "images/Profil6.png",
+        "argent": 696969,
+        "jour_actuel": 1
+    }
+}

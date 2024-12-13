@@ -1,9 +1,7 @@
 import customtkinter as ctk
-from PIL import Image, ImageTk
-from .Technician import Technician   # Importation de la classe
+from PIL import Image, ImageTk # Importation de la classe
 from customtkinter import CTkImage
 from NotificationsManager import get_global_notifications_manager
-from .Technician import Technician #module a adapter
 from customtkinter import CTkImage
 manager = get_global_notifications_manager()
 
@@ -24,36 +22,10 @@ class Machine:
         self.technicien = None  # Initialisation à None
         self.en_reparation_flag = False  # Indicateur de réparation
         self.marteau_image_label = None
+        self.technicien_image_label = None
 
 
-    def assign_technician(self, technician):
-        """Assigne un technicien à cette machine."""
-        if self.technicien is not None:
-            print(f"Machine {self.nom} ({self.niveau_machine}) a déjà un technicien assigné.")
-            return False
-        if self.en_reparation_flag:
-            print(f"Machine {self.nom} ({self.niveau_machine}) est en réparation et ne peut pas être assignée à un technicien.")
-            return False
-        if technician.assigned_machine is not None:
-            technician.assigned_machine.technicien = None
-        if technician.specialite != self.type_machine:
-            print(f"{technician.nom} ne peut pas être assigné à la machine {self.nom} ({self.niveau_machine}) car il n'a pas la spécialité {self.type_machine}.")
-            return False     
-        technician.assigned_machine = self
-        self.technicien = technician
-        print(f"{technician.nom} a été assigné à la machine {self.nom} ({self.niveau_machine}).")
-        return True
 
-    def unassign_technician(self):
-        if self.technicien is None:
-            print(f"Aucun technicien n'est assigné à la machine {self.nom} ({self.niveau_machine}).")
-            return False
-        if self.en_reparation_flag:
-            print(f"Machine {self.nom} ({self.niveau_machine}) est en réparation et le technicien ne peut pas être désassigné.")
-            return False
-        print(f"{self.technicien.nom} a été désassigné de la machine {self.nom} ({self.niveau_machine}).")
-        self.technicien = None
-        return True
     
     def create_interface(self, root):
         """Crée l'interface visuelle pour chaque machine."""
@@ -64,9 +36,8 @@ class Machine:
         ctk.CTkLabel(self.frame, text=f"{self.nom} ({self.niveau_machine})", font=("Arial", 12)).pack(pady=5)
 
         # Bouton de réparation (placé juste après le nom)
-        self.repair_button = ctk.CTkButton(
-            self.frame, text="Réparer", command=self.reparer_temps
-        )
+        self.repair_button = ctk.CTkButton(self.frame, text="Réparer", command=self.reparer_temps)
+        self.repair_button.configure(state="disabled")  # Désactiver par défaut
         self.repair_button.pack(pady=5)  # Espacement réduit pour être proche du label
 
         # Conteneur pour l'image et la barre d'état
@@ -84,6 +55,7 @@ class Machine:
 
         # Initialisation de la barre d'état
         self.update_barre()
+
 
     def degrader_etat(self):
         """Dégrade l'état de la machine."""
@@ -115,23 +87,30 @@ class Machine:
         self.etat = 100
         self.update_barre()
         self.stop_repair()
+        self.en_reparation_flag = False
+        if self.technicien is not None:
+            self.repair_button.configure(state="normal")
 
 
     def reparer_temps(self):
         """Répare la machine après un certain temps."""
         if self.technicien is not None:
             self.start_repair()
+            self.en_reparation_flag = True
+            self.repair_button.configure(state="disabled")  # Désactiver le bouton pendant la réparation
             self.frame.after(int(self.temps_entretien * self.technicien.facteur_reparation), self.reparer)
         else:
-            print("Aucun technicien assigné à cette machine.")
+            print("Aucun technicien assigné à cette machine.") 
     
     def start_repair(self):
+        manager = get_global_notifications_manager()
         """Démarre la réparation de la machine."""
         self.en_reparation_flag = True
-        print(f"Réparation de la machine {self.nom} ({self.niveau_machine}) commencée.")
-
+        if manager:
+            manager.ajouter_notification(f"Réparation de la machine {self.nom} ({self.niveau_machine}) commencée. Elle durera {self.temps_entretien * self.technicien.facteur_reparation/1000} secondes")
+        
         # Charger l'image du marteau
-        marteau_image = CTkImage(Image.open('images/marteau.png').resize((30, 30)))
+        marteau_image = CTkImage(Image.open('images/marto.png').resize((30, 30)))
 
         # Ajouter l'image du marteau au-dessus de l'image de la machine
         if self.marteau_image_label is None:
@@ -142,9 +121,11 @@ class Machine:
             self.marteau_image_label.place(relx=0.8, rely=0.0, anchor='n')
 
     def stop_repair(self):
+        manager = get_global_notifications_manager()
         """Arrête la réparation de la machine."""
         self.en_reparation_flag = False
-        print(f"Réparation de la machine {self.nom} ({self.niveau_machine}) terminée.")
+        if manager:
+            manager.ajouter_notification(f"Réparation de {self.nom} ({self.niveau_machine}) terminée.")
 
         # Masquer l'image du marteau
         if self.marteau_image_label is not None:
@@ -210,17 +191,18 @@ def acheter_machine(machine, joueur, interface_machines, update_scrollable_frame
             manager.ajouter_notification("Pas assez d'argent pour acheter cette machine.")
 # Liste des machines disponibles à l'achat
 machines_disponibles = [
-    Machine("Tour", "Maître", "Mécanique", 25000, 6000, 3500, 0.165, "images/TourNiveau2.png"),
-    Machine("CNC", "Artisan", "Électrique", 30000, 7000, 4000, 0.135, "images/CNCNiveau1.png"),
-    Machine("CNC", "Virtuose", "Électrique", 35000, 9000, 4500, 0.12, "images/CNCNiveau2.png"),
-    Machine("Bras Robot", "Rookie", "Informatique", 15000, 4000, 2000, 0.1, "images/RobotNiveau1.png"),
-    Machine("Bras Robot", "Légendaire", "Informatique", 23000, 5000, 2500, 0.084, "images/RobotNiv2.png")
+    Machine("Tour", "Maître", "Mécanique", 20000, 25000, 3500, 0.165, "images/TourNiveau2.png"),
+    Machine("CNC", "Artisan", "Électrique", 30000, 30000, 6000, 0.135, "images/CNCNiveau1.png"),
+    Machine("CNC", "Virtuose", "Électrique", 40000, 40000, 8000, 0.12, "images/CNCNiveau2.png"),
+    Machine("Bras Robot", "Rookie", "Informatique", 50000, 45000, 12000, 0.1, "images/RobotNiveau1.png"),
+    Machine("Bras Robot", "Légendaire", "Informatique", 75000, 60000, 18000, 0.084, "images/RobotNiv2.png")
 ]
 
 # Liste des machines possédées par le joueur au départ (une seule machine niveau 1)
 machines_possedees = [
-    Machine("Tour", "Apprenti", "Mécanique", 20000, 10000, 3000, 0.21, "images/TourNiveau1.png")
+    Machine("Tour", "Apprenti", "Mécanique", 10000, 20000, 1500, 0.21, "images/TourNiveau1.png")
 ]
+
 
 # Exemple d'utilisation dans un autre fichier
 if __name__ == "__main__":

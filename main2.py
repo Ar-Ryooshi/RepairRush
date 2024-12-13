@@ -4,12 +4,12 @@ from PIL import Image
 from modules.Machines import Machine, machines_disponibles,machines_possedees, InterfaceGraphique, acheter_machine
 from modules.Technician import Technician, technicians, engagement_buttons, update_engaged_frame, engager_technicien
 from modules.Joueur import Joueur, creer_labels_profil
-import json
+import pickle
 import tkinter.messagebox as messagebox
 import customtkinter as ctk
-import os
+import time
 from PIL import Image, ImageTk
-# import sound_manager
+import os
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -51,7 +51,6 @@ def creer_ecran_accueil():
     quit_button = ctk.CTkButton(frame, text="Quitter", command=root.quit, font=("Arial", 20), width=300)
     quit_button.pack(pady=20)
 
-
 def creer_ecran_choix_partie():
     frame = frames["choix_partie"]
     frame.lift()
@@ -90,7 +89,6 @@ def creer_ecran_choix_partie():
     )
     back_button.place(relx=0.5, y=300, anchor="center")
 
-
 def demander_nom():
     frame = frames["nom_joueur"]
     frame.lift()
@@ -120,7 +118,6 @@ def demander_nom():
 
     ctk.CTkButton(frame, text="Suivant", command=valider_nom, font=("Arial", 20)).pack(pady=20)
 
-
 def choisir_photo_profil():
     frame = frames["photo_profil"]
     frame.lift()
@@ -132,89 +129,22 @@ def choisir_photo_profil():
     img_frame = ctk.CTkFrame(frame)
     img_frame.pack(pady=20)
 
-    def selectionner_photo(path):
-        player_data["photo"] = path
-        joueur = Joueur(
-            nom=player_data["nom"],
-            entreprise=player_data["entreprise"],
-            photo=path
-        )
-        print(f"Profil créé : {joueur.nom} ({joueur.entreprise}), photo sélectionnée : {path}")
-        lancer_tutoriel(joueur)
-
     for img_path in images:
         try:
             img = CTkImage(light_image=Image.open(img_path), size=(100, 100))
-            btn = ctk.CTkButton(img_frame, image=img, text="", command=lambda path=img_path: selectionner_photo(path))
+            btn = ctk.CTkButton(img_frame, image=img, text="", command=lambda path=img_path: pre_lancer_jeu(path))
             btn.pack(side="left", padx=10)
         except FileNotFoundError:
             print(f"Erreur : L'image {img_path} est introuvable.")
 
-
-def lancer_tutoriel(joueur):
-    tutoriel_frame = ctk.CTkFrame(root, width=1500, height=900, fg_color="#E8C36A")
-    tutoriel_frame.place(relwidth=1, relheight=1)
-
-    titre_label = ctk.CTkLabel(
-        tutoriel_frame,
-        text=f"Bienvenue, {joueur.nom} !",
-        font=("Arial", 40, "bold"),
-        text_color="black",
-    )
-    titre_label.pack(pady=20)
-
-    intro_label = ctk.CTkLabel(
-        tutoriel_frame,
-        text=(
-            f"Vous êtes maintenant à la tête de l'atelier '{joueur.entreprise}'. "
-            "Votre objectif est clair : maintenir vos machines en parfait état, "
-            "gérer vos techniciens, et maximiser vos profits pour faire prospérer votre entreprise !"
-        ),
-        font=("Arial", 20),
-        wraplength=1200,
-        justify="center",
-        text_color="black",
-    )
-    intro_label.pack(pady=20)
-
-    étapes = [
-        "1. Gardez vos machines dans le vert pour un rendement optimal.",
-        "2. Engagez des techniciens et attribuez-les aux machines en panne.",
-        "3. Faites attention à vos finances : ne dépensez pas plus que vous gagnez !",
-        "4. Investissez dans des machines modernes pour maximiser vos profits.",
-        "5. Chaque journée dure 2 minutes en temps réel. Planifiez rapidement !",
-    ]
-
-    étapes_label = ctk.CTkLabel(
-        tutoriel_frame,
-        text="\n".join(étapes),
-        font=("Arial", 18),
-        justify="left",
-        text_color="black",
-    )
-    étapes_label.pack(pady=20)
-
-    def lancer_jeu():
-        tutoriel_frame.destroy()
-        creer_interface_jeu()
-
-    bouton_continuer = ctk.CTkButton(
-        tutoriel_frame,
-        text="Commencer votre aventure !",
-        command=lancer_jeu,
-        font=("Arial", 20, "bold"),
-    )
-    bouton_continuer.pack(pady=30)
-
-    print(f"Tutoriel lancé pour le joueur {joueur.nom} ({joueur.entreprise}).")
-
+def pre_lancer_jeu(photo_path):
+    player_data["photo"] = photo_path
+    creer_interface_jeu()
 
 def creer_interface_jeu():
     #region Créer les différents frames
     """Crée l'interface principale du jeu et affiche le menu principal."""
     # Ajoute les frames du jeu au dictionnaire global
-    sound_manager.playmusic("sounds/mainost.mp3", loop=True)
-    global joueur, machines_possedees, technicians
     joueur = Joueur(
         nom=player_data["nom"],
         entreprise=player_data["entreprise"],
@@ -250,7 +180,9 @@ def creer_interface_jeu():
     # Monnaie sélectionnée par défaut (euros)
 
     selected_currency = "€"
-
+    # Menu déroulant pour sélectionner la monnaie
+    currency_options = ["€", "$", "£"]
+    currency_var = ctk.StringVar(value=selected_currency)
     def update_scrollable_frame():
         for widget in scrollable_frame.winfo_children():
             widget.destroy()
@@ -284,8 +216,11 @@ def creer_interface_jeu():
     labels_profil = creer_labels_profil(frames["menu_principal"], joueur, selected_currency)
     joueur.trigger_ui_update()
 
-
-
+    joueur.jour_actuel
+    if joueur.jour_actuel == 20:
+        messagebox.showinfo("Fin de la partie", "La partie est terminée !")
+        root.destroy()
+        exit()
 
     progress_bar = ctk.CTkProgressBar(frames["menu_principal"], width=600, height=30, progress_color='green')
     progress_bar.place(x=10, y=350)
@@ -306,32 +241,8 @@ def creer_interface_jeu():
             root.after(10, update_progress_bar, 0)
             joueur.incrementer_jour()
             joueur.ajouter_revenu()
-            Endgame()
             
-            sound_manager.play_effect("sounds/ca-ching.mp3")  # Jouer le son de gain d'argent
-
-    def Endgame():
-        if joueur.jour_actuel == 20:
-            messagebox.showinfo(f"Félicitations", 
-                                f"Vous avez fait tenir {joueur.entreprise} pendant 20 jours ! Vous êtes en bonne voie pour devenir un magnat de la réparation !\n "
-                                f"Vous avez empoché {joueur.argent} {selected_currency}.")
-            root.destroy()
-            exit()  
-        if joueur.argent < joueur.couts_fixes:
-            messagebox.showerror(
-                "Game Over", 
-                f"Vous n'avez plus assez d'argent pour payer vos techniciens.\nVotre entreprise {joueur.entreprise} a fait faillite !"
-            )
-            root.destroy()
-            exit()
-        if all(machine.etat == 0 for machine in joueur.machines_possedees):
-            messagebox.showerror(
-                "Game Over", 
-                f"Toutes vos machines sont hors d'état de marche.\nVotre entreprise {joueur.entreprise} doit fermer ses portes !"
-            )
-            root.destroy()
-            exit()
-
+            # sound_manager.play_effect("sounds/ca-ching.mp3")  # Jouer le son de gain d'argent
 
 
 
@@ -473,14 +384,14 @@ def creer_interface_jeu():
                 hire_button.configure(state="disabled")
 
             # Fonction pour engager le technicien
-            hire_button.configure(command=lambda t=technician, b=hire_button: engager_technicien(t, joueur, engaged_frame, labels_profil["argent"], engagement_buttons, b))
+            hire_button.configure(command=lambda t=technician, b=hire_button: engager_technicien(t, joueur, engaged_frame, labels_profil["argent"], engagement_buttons, b, progress_bar))
             hire_button.grid(row=i * 2 + 2, column=5, padx=10, pady=5)
 
     #region --- NOTIFICATIONS ---
     # Notifications pour les actions du joueur
     from NotificationsManager import NotificationsManager, set_global_notifications_manager
 
-    notifications_manager = NotificationsManager(frames["menu_principal"], x=1400, y=50, width=450, height=500)
+    notifications_manager = NotificationsManager(frames["menu_principal"], x=1400, y=50, width=300, height=500)
     set_global_notifications_manager(notifications_manager)
 
     notifications_manager.ajouter_notification("Bienvenue dans le jeu !")
@@ -520,68 +431,22 @@ def creer_interface_jeu():
 
 
     # --- Section Profil ---
-    profile_label = ctk.CTkLabel(frames["parametres"], text="Profil", font=("Arial", 20, "bold"), text_color="black")
+    profile_label = ctk.CTkLabel(frames["parametres"], text="Profil", font=("Arial", 20, "bold"),text_color="black")
     profile_label.place(x=50, y=20)
 
-    name_label = ctk.CTkLabel(frames["parametres"], text="Nom:", text_color="black")
+    name_label = ctk.CTkLabel(frames["parametres"], text="Nom:",text_color="black")
     name_label.place(x=50, y=60)
-
     name_entry = ctk.CTkEntry(frames["parametres"])
-    name_entry.insert(0, joueur.nom)  # Pré-remplit l'entrée avec le nom actuel
     name_entry.place(x=150, y=60)
 
-    # Bouton pour confirmer le changement de nom
-    def confirmer_nom():
-        nouveau_nom = name_entry.get().strip()
-        if len(nouveau_nom) >= 3:  # Vérifie que le nom a au moins 3 caractères
-            joueur.nom = nouveau_nom
-            messagebox.showinfo("Confirmation", f"Nom changé avec succès en : {nouveau_nom}")
-            print(f"Le nom du joueur a été changé en : {joueur.nom}")
-            rafraichir_interface_principale()
+    currency_label = ctk.CTkLabel(frames["parametres"], text="Monnaie:",text_color="black")
+    currency_label.place(x=50, y=100)
+    currency_dropdown = ctk.CTkComboBox(frames["parametres"], values=["€", "$", "£"], command=update_currency)
+    currency_dropdown.place(x=150, y=100)
 
-            
-        else:
-            messagebox.showerror("Erreur", "Le nom doit contenir au moins 3 caractères.")
-    def rafraichir_interface_principale():
-        labels_profil["nom"].configure(text=f"{joueur.nom}")
-
-    confirm_button = ctk.CTkButton(
-        frames["parametres"],
-        text="Confirmer",
-        command=confirmer_nom
-    )
-    confirm_button.place(x=350, y=60)
-
-    company_label = ctk.CTkLabel(frames["parametres"], text="Entreprise:", text_color="black")
-    company_label.place(x=50, y=100)
-
-    company_entry = ctk.CTkEntry(frames["parametres"])
-    company_entry.insert(0, joueur.entreprise)  # Pré-remplit avec le nom actuel
-    company_entry.place(x=150, y=100)
-
-    def confirmer_entreprise():
-        nouveau_nom_entreprise = company_entry.get().strip()
-        if len(nouveau_nom_entreprise) >= 3:
-            if joueur.argent >= 100:
-                joueur.argent -= 100  # Retirer 100 balles pour les frais administratifs
-                joueur.entreprise = nouveau_nom_entreprise
-                labels_profil["argent"].configure(text=f"{joueur.argent} €")  # Met à jour l'affichage de l'argent
-                messagebox.showinfo(
-                    "Confirmation",
-                    f"Le nom de votre entreprise a été changé en : {nouveau_nom_entreprise} pour 100 €"
-                )
-                print(f"Le nom de l'entreprise a été changé en : {joueur.entreprise}")
-            else:
-                messagebox.showerror("Erreur", "Pas assez d'argent pour changer le nom de l'entreprise.")
-        else:
-            messagebox.showerror("Erreur", "Le nom de l'entreprise doit contenir au moins 3 caractères.")
-
-    confirm_company_button = ctk.CTkButton(
-        frames["parametres"],
-        text="Changer (100 €)",
-        command=confirmer_entreprise
-    )
-    confirm_company_button.place(x=350, y=100)
+    # --- Section Sauvegarde/Chargement ---
+    save_label = ctk.CTkLabel(frames["parametres"], text="Partie", font=("Arial", 20, "bold"),text_color="black")
+    save_label.place(x=50, y=160)
 
     save_button = ctk.CTkButton(frames["parametres"], text="Sauvegarder",command=sauvegarder_partie)
     save_button.place(x=50, y=200)
@@ -590,50 +455,15 @@ def creer_interface_jeu():
     sound_label = ctk.CTkLabel(frames["parametres"], text="Son", font=("Arial", 20, "bold"),text_color="black")
     sound_label.place(x=50, y=280)
 
-    sound_label = ctk.CTkLabel(frames["parametres"], text="Son",text_color="black")
-    sound_label.place(x=50, y=320)
-    sound_slider = ctk.CTkSlider(
-        frames["parametres"],
-        from_=0,  # Volume minimum
-        to=100,  # Volume maximum
-        command=lambda value: sound_manager.setvolume(int(value))  # Appelle setvolume avec la valeur du slider
-    )
-    sound_slider.place(x=150, y=320)
-    #region --- BOUTONS DE SON ---
-    music_enabled_var = ctk.BooleanVar(value=True)  # Musique activée par défaut
+    music_label = ctk.CTkLabel(frames["parametres"], text="Musique:",text_color="black")
+    music_label.place(x=50, y=320)
+    music_slider = ctk.CTkSlider(frames["parametres"], from_=0, to=100, command=lambda value: sound_manager.set_music_volume(int(value)))
+    music_slider.place(x=150, y=320)
 
-    # Fonction pour activer/désactiver la musique
-    def toggle_music(sound_manager, music_var):
-        """Active ou désactive la musique selon l'état de la case à cocher."""
-        if music_var.get():  # Si la case est cochée
-            current_volume = sound_manager.getvolume()
-            if current_volume == 0:  # Si le volume est à 0, remets un volume par défaut
-                sound_manager.setvolume(50)  # Remets le volume à 50%
-            sound_manager.resumemusic()  # Reprends la musique si elle est en pause
-        else:  # Si la case est décochée
-            sound_manager.setvolume(0)  # Mets le volume à 0 pour couper la musique
-
-    # Initialisation pour synchroniser la case avec l'état réel de la musique
-    if sound_manager.getvolume() == 0:
-        music_enabled_var.set(False)
-    else:
-        music_enabled_var.set(True)
-
-    # Ajout de la case à cocher dans les paramètres
-    music_toggle_checkbox = ctk.CTkCheckBox(
-        frames["parametres"],
-        text="🎵 Activer la musique",
-        variable=music_enabled_var,
-        onvalue=True,
-        offvalue=False,
-        command=lambda: toggle_music(sound_manager, music_enabled_var)
-    )
-    music_toggle_checkbox.place(x=150, y=420)
-    #endregion
-    # Synchroniser la position initiale du slider avec le volume actuel
-    current_volume = sound_manager.getvolume()  # Récupère le volume actuel
-    sound_slider.set(current_volume) 
-
+    effects_label = ctk.CTkLabel(frames["parametres"], text="Effets Sonores:",text_color="black")
+    effects_label.place(x=50, y=360)
+    effects_slider = ctk.CTkSlider(frames["parametres"], from_=0, to=100, command=lambda value: sound_manager.set_effect_volume(int(value)))
+    effects_slider.place(x=150, y=360)
 
     # --- Bouton Retour ---
     back_button = ctk.CTkButton(frames["parametres"], text="← Menu Principal", width=200, command=lambda: afficher_frame(frames["menu_principal"]))
@@ -650,22 +480,18 @@ def creer_interface_jeu():
     # Afficher les machines au démarrage
     afficher_machines()
 
-
-    try:
-        with open(SAVE_FILE, "rb"):
-            return True
-    except FileNotFoundError:
-        return False
-
-
-SAVE_FILE = "save/Save.json"
+# Variables globales
+SAVE_FILE = "save/sauvegarde.pkl"
 current_step = 0
 tutorial_steps = [
     {"text": "Bienvenue dans Repair Rush !", "color": "yellow"},
     {"text": "Votre but est de gérer des machines et techniciens pour maximiser vos profits.", "color": "orange"},
     {"text": "Planifiez, entretenez et réparez vos machines avant qu'elles ne tombent en panne !", "color": "red"}
 ]
-
+player_data = {"nom": "", "entreprise": "", "photo": ""}
+machines_possedees = []
+technicians = []
+joueur = None
 
 # Vérifier sauvegarde
 def verifier_sauvegarde():
@@ -679,127 +505,64 @@ def verifier_sauvegarde():
 def sauvegarder_partie():
     try:
         # Vérifier et créer le dossier de sauvegarde si nécessaire
-        save_dir = os.path.dirname(SAVE_FILE)
+        save_dir = "/".join(SAVE_FILE.split("/")[:-1])
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-
-        # Sauvegarder les noms et niveaux des machines possédées
-        possessed_machines = [{"nom": machine.nom, "niveau": machine.niveau_machine} for machine in joueur.machines_possedees]
-        # Sauvegarder les noms des techniciens possédés
-        possessed_technicians = [technician.nom for technician in joueur.techniciens_possedes]
-
-        # Préparer les données à sauvegarder
+        
+        # Collecter les données à sauvegarder
         data = {
             "player_data": player_data,
-            "machines_possedees": possessed_machines,
-            "techniciens_possedes": possessed_technicians,
-            "joueur": {
-                "nom": joueur.nom,
-                "entreprise": joueur.entreprise,
-                "photo": joueur.photo,
-                "argent": joueur.argent,
-                "jour_actuel": joueur.jour_actuel
-            }
+            "machines": machines_possedees,
+            "technicians": technicians,
+            "joueur": joueur.__dict__ if joueur else None,  # Sauvegarder les attributs de l'objet joueur
+            "machine_data": [machine.__dict__ for machine in machines_possedees]
         }
-        print("Machines possédées :", possessed_machines)
-
-        # Sauvegarder les données au format JSON
-        with open(SAVE_FILE, "w") as f:
-            json.dump(data, f, indent=4)
-
-        print("Données sauvegardées avec succès en JSON.")
+        print(machines_possedees)
+        print(data)
+        # Sauvegarder les données dans un fichier pickle
+        with open(SAVE_FILE, "wb") as f:
+            pickle.dump(data, f)
+        
+        print("Données sauvegardées avec succès.")
         messagebox.showinfo("Sauvegarde", "Données sauvegardées avec succès.")
     except Exception as e:
         print(f"Erreur lors de la sauvegarde des données : {e}")
         messagebox.showerror("Erreur", f"Erreur lors de la sauvegarde des données : {e}")
-labels_profil = {
-    "argent": None
-}
-class FakeProgressBar:
-    """Barre de progression factice pour simuler une journée complète."""
-    def get(self):
-        return 1.0  # Retourne toujours une progression complète
-fake_progress_bar = FakeProgressBar()
+
 def charger_partie():
-    try:
-        with open(SAVE_FILE, "r") as f:
-            data = json.load(f)
-
-        global player_data, joueur, machines_possedees, technicians, frames, labels_profil, engagement_buttons
-
-        # Restaurer les données du joueur
-        player_data = data["player_data"]
-        joueur = Joueur(
-            nom=data["joueur"]["nom"],
-            entreprise=data["joueur"]["entreprise"],
-            photo=data["joueur"]["photo"],
-            argent=data["joueur"]["argent"],
-        )
-
-        # Initialiser le frame pour les machines
-        machines_frame = ctk.CTkFrame(frames["menu_principal"], width=1380, height=300)
-        machines_frame.place(x=10, y=760)
-
-        # Restaurer les machines possédées
-        for m in data["machines_possedees"]:
-            machine = next(
-                (mach for mach in machines_disponibles if mach.nom == m["nom"] and mach.niveau_machine == m["niveau"]),
-
-                None
-            )
-            if machine:
-                joueur.acheter_machine(machine)
-            else:
-                print(f"Machine non trouvée : {m['nom']} ({m['niveau']})")
-
-        # Mettre à jour l'interface des machines
-        InterfaceGraphique(machines_frame, joueur.machines_possedees).create_machines_interface()
-
-        # Initialiser le frame pour les techniciens engagés
-        engaged_frame = ctk.CTkFrame(frames["menu_principal"], width=1160, height=200, fg_color="#333333")
-        
-
-        # Restaurer les techniciens possédés
-        creer_interface_jeu()
-        joueur.argent = data["joueur"]["argent"]
-        joueur.jour_actuel = data["joueur"]["jour_actuel"]
-        for nom in data["techniciens_possedes"]:
-            technician = next((tech for tech in technicians if tech.nom == nom), None)
-            if technician:
-                # Engage directement le technicien (sans bouton)
-                technician.engager(joueur)
-                print(f"Technicien restauré et engagé : {technician.nom}")
-            else:
-                print(f"Technicien non trouvé : {nom}")
-
-        # Après avoir restauré les techniciens, force la réinitialisation de la frame
-        engaged_frame.destroy()  # Supprime le cadre existant
-        engaged_frame = ctk.CTkFrame(frames["menu_principal"], width=1160, height=200, fg_color="#333333")
-        engaged_frame.place(x=10, y=500)
-
-        # Réinitialise l'affichage des techniciens
-        update_engaged_frame(
-            engaged_frame=engaged_frame,
-            joueur=joueur,
-            argent_label=labels_profil["argent"],
-            engagement_buttons=engagement_buttons
-        )
-        print("Engaged frame réinitialisé.")
-
-        print("Partie chargée avec succès.")
-        messagebox.showinfo("Chargement", "Partie chargée avec succès.")
-
-    except Exception as e:
-        print(f"Erreur lors du chargement des données : {e}")
-        messagebox.showerror("Erreur", f"Erreur lors du chargement des données : {e}")
-
-
-
-
-
-
-
-
+    if verifier_sauvegarde():
+        try:
+            with open(SAVE_FILE, "rb") as f:
+                data = pickle.load(f)
+            
+            global player_data, machines_possedees, technicians, joueur
+            player_data.update(data["player_data"])
+            
+            # Restaurer les machines possédées
+            machines_possedees.clear()
+            for machine_data in data["machines"]:
+                machine = Machine()  # Assurez-vous que la classe Machine est importée
+                machine.__dict__.update(machine_data)
+                machines_possedees.append(machine)
+            
+            # Restaurer les techniciens
+            technicians.clear()
+            for technician_data in data["technicians"]:
+                technician = Technician()  # Assurez-vous que la classe Technician est importée
+                technician.__dict__.update(technician_data)
+                technicians.append(technician)
+            
+            # Restaurer les attributs de l'objet joueur
+            if data["joueur"]:
+                joueur.__dict__.update(data["joueur"])
+            print(machines_possedees)
+            print("Données chargées avec succès.")
+            creer_interface_jeu()
+        except Exception as e:
+            print(f"Erreur lors du chargement des données : {e}")
+            messagebox.showerror("Erreur", f"Erreur lors du chargement des données : {e}")
+    else:
+        messagebox.showerror("Erreur", "Aucune sauvegarde trouvée.")
 # Lancer l'écran d'accueil
 creer_ecran_accueil()
 
