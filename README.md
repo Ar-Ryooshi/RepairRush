@@ -1,12 +1,17 @@
-# Repair Rush
+# A LIRE AVANT D'EXECUTER !
 
-Repair Rush est un jeu de gestion dans lequel le joueur doit maintenir ses machines en état de marche tout en gérant des techniciens. Le but est de survivre pendant 20 jours tout en faisant des profits.
+Ce projet possède quelques dépendances, afin de ne pas vous embeter, entrez la commande suivante:
 
-## Fonctionnalités prévues
-- Gestion des machines avec des barres de progression.
-- Gestion des techniciens avec différents coûts et durées de réparation.
-- Événements aléatoires affectant les machines.
+pip install -r requirements.txt
 
-## Objectif
-Survivre 20 jours tout en optimisant les ressources pour maintenir les machines en fonctionnement.
+### Message du Développeur
 
+Bonjour !
+
+Je suis super excité de partager avec vous mon tout premier jeu. Je sais qu'il est loin d'être parfait et qu'il y a probablement quelques bugs ici et là, mais j'espère vraiment que vous prendrez autant de plaisir à y jouer que j'en ai eu à le créer.
+
+N'hésitez pas à me faire part de vos retours, qu'ils soient positifs ou négatifs, cela m'aidera énormément à m'améliorer pour mes futurs projets.
+
+Merci d'avance et amusez-vous bien !
+
+- Le Développeur
