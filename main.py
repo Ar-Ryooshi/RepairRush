@@ -9,7 +9,9 @@ import tkinter.messagebox as messagebox
 import customtkinter as ctk
 import os
 from PIL import Image, ImageTk
-# import sound_manager
+
+from sound_manager import SoundManager
+sound_manager = SoundManager()
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
