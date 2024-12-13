@@ -9,7 +9,13 @@ import json
 import customtkinter as ctk
 import tkinter.messagebox as messagebox
 from PIL import Image, ImageTk
+<<<<<<< HEAD
 from customtkinter import CTkImage
+=======
+
+from sound_manager import SoundManager
+sound_manager = SoundManager()
+>>>>>>> 543241cc8413c0f64dff1384314af4cc515ac71c
 
 # Importation des modules spécifiques au jeu
 from modules.Machines import machines_disponibles, machines_possedees, InterfaceGraphique, acheter_machine
