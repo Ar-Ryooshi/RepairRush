@@ -1,11 +1,41 @@
-import customtkinter as ctk
-from PIL import Image, ImageTk
-from NotificationsManager import get_global_notifications_manager
+"""
+Module Technician pour la gestion des techniciens dans RepairRush.
 
-manager = get_global_notifications_manager()
-# Classe Technician
+Ce fichier contient la classe `Technician` et les méthodes nécessaires pour gérer les techniciens,
+leurs interactions avec les machines et leurs statuts.
+"""
+import customtkinter as ctk
+from customtkinter import CTkButton, CTkFrame, CTkLabel
+from PIL import Image, ImageTk
+from modules.NotificationsManager import get_global_notifications_manager
+
 class Technician:
+    """
+    Classe représentant un technicien dans le jeu.
+
+    Attributs :
+        nom (str) : Nom du technicien.
+        specialite (str) : Spécialité du technicien (Mécanique, Électrique, Informatique).
+        niveau (str) : Niveau d'expertise (Débutant, Moyen, Expert).
+        salaire (int) : Salaire du technicien.
+        facteur_reparation (float) : Facteur influençant la durée de réparation.
+        image_path (str) : Chemin de l'image du technicien.
+        assigned_machine (Machine) : Machine actuellement assignée (None si non assigné).
+        machine_image_label (CTkLabel) : Label pour afficher une image sur la machine associée.
+    """
+
     def __init__(self, nom, specialite, niveau, salaire, facteur_reparation, image_path):
+        """
+        Initialise un technicien.
+
+        Args :
+            nom (str) : Nom du technicien.
+            specialite (str) : Spécialité du technicien.
+            niveau (str) : Niveau d'expertise.
+            salaire (int) : Salaire du technicien.
+            facteur_reparation (float) : Facteur influençant la durée de réparation.
+            image_path (str) : Chemin de l'image du technicien.
+        """
         self.nom = nom
         self.specialite = specialite
         self.niveau = niveau
@@ -16,186 +46,248 @@ class Technician:
         self.machine_image_label = None
 
     def assign_to_machine(self, machine, assign_button, joueur, tech_frame):
+        """
+        Assigne le technicien à une machine compatible.
+
+        Args :
+            machine (Machine) : Machine à assigner.
+            assign_button (CTkButton) : Bouton pour gérer l'affectation.
+            joueur (Joueur) : Instance du joueur.
+            tech_frame : Cadre contenant le technicien.
+
+        Returns :
+            bool : True si l'affectation réussit, False sinon.
+        """
         manager = get_global_notifications_manager()
+
         if self.assigned_machine is not None:
             if manager:
                 manager.ajouter_notification(f"{self.nom} est déjà assigné à une machine.")
             return False
+
         if self.specialite != machine.type_machine:
             if manager:
-                manager.ajouter_notification(f"{self.nom} ne peut pas être assigné à la machine {machine.nom} ({machine.niveau_machine}) car les types ne correspondent pas.")
+                manager.ajouter_notification(
+                    f"{self.nom} ne peut pas être assigné à la machine {machine.nom} ({machine.niveau_machine})."
+                )
             return False
+
         self.assigned_machine = machine
         machine.technicien = self
         if manager:
-            manager.ajouter_notification(f"{self.nom} a été assigné à la machine {machine.nom} ({machine.niveau_machine}).")
-        assign_button.configure(text="Désaffecter", command=lambda: self.unassign_from_machine(assign_button, joueur))
+            manager.ajouter_notification(
+                f"{self.nom} a été assigné à la machine {machine.nom} ({machine.niveau_machine})."
+            )
+
+        assign_button.configure(
+            text="Désaffecter", 
+            command=lambda: self.unassign_from_machine(assign_button, joueur)
+        )
 
         if not machine.en_reparation_flag:
             machine.repair_button.configure(state="normal")
         return True
-    
+
     def unassign_from_machine(self, assign_button=None, joueur=None):
+        """
+        Désassigne le technicien de la machine actuelle.
+
+        Args :
+            assign_button (CTkButton) : Bouton à mettre à jour après désaffectation.
+            joueur (Joueur) : Instance du joueur.
+
+        Returns :
+            bool : True si la désaffectation réussit, False sinon.
+        """
         manager = get_global_notifications_manager()
-        if self.assigned_machine.repair_button:
-            self.assigned_machine.repair_button.configure(state="disabled")
+
         if self.assigned_machine is None:
             if manager:
                 manager.ajouter_notification(f"{self.nom} n'est pas assigné à une machine.")
             return False
+
         if self.assigned_machine.en_reparation_flag:
             if manager:
-                manager.ajouter_notification(f"{self.nom} ne peut pas être désassigné car la machine {self.assigned_machine.nom} ({self.assigned_machine.niveau_machine}) est en réparation.")
+                manager.ajouter_notification(
+                    f"{self.nom} ne peut pas être désassigné car la machine {self.assigned_machine.nom} est en réparation."
+                )
             return False
+
         if manager:
-            manager.ajouter_notification(f"{self.nom} a été désassigné de la machine {self.assigned_machine.nom} ({self.assigned_machine.niveau_machine}).")
+            manager.ajouter_notification(
+                f"{self.nom} a été désassigné de la machine {self.assigned_machine.nom}."
+            )
+
+        # Désassigner le technicien de la machine
         self.assigned_machine.technicien = None
         self.assigned_machine = None
+
         if assign_button:
-            assign_button.configure(text="Attribuer", command=lambda: open_assign_window(self, joueur, assign_button))
+            assign_button.configure(
+                text="Attribuer", 
+                command=lambda: open_assign_window(self, joueur, assign_button)
+            )
 
-
-        # Supprimer l'image de la machine
-        if self.machine_image_label is not None:
+        # Supprimer l'image associée à la machine
+        if self.machine_image_label:
             self.machine_image_label.place_forget()
             self.machine_image_label = None
 
         return True
 
-    def engager(self, joueur, progression_jour=1.0):
-        manager = get_global_notifications_manager()
+    def engager(self, joueur, progression_jour=1.5):
         """
-        Engage le technicien et soustrait le salaire ajusté.
-        progression_jour est un float entre 0 et 1 indiquant la progression de la journée.
+        Engage le technicien avec un coût basé sur le temps restant dans la journée.
+
+        Args :
+            joueur (Joueur) : Instance du joueur.
+            progression_jour (float) : Fraction de la journée restante (entre 0 et 1).
+
+        Returns :
+            bool : True si l'engagement réussit, False sinon.
         """
         cout_restant = self.salaire * progression_jour
         if joueur.argent >= cout_restant:
-            joueur.argent -= int(cout_restant) #empêche que le .0 soit ajouté
+            joueur.argent -= int(cout_restant)
             joueur.techniciens_possedes.append(self)
-            if manager:
-                manager.ajouter_notification(f"{self.nom} engagé pour {int(cout_restant)} €.")
             return True
-        if manager:
-            manager.ajouter_notification(f"Pas assez d'argent pour engager {self.nom}.")
-    
+        return False
 
     def licencier(self, joueur):
+        """
+        Licencie le technicien.
+
+        Args :
+            joueur (Joueur) : Instance du joueur.
+
+        Returns :
+            bool : True si le licenciement réussit, False sinon.
+        """
         manager = get_global_notifications_manager()
+
         if self in joueur.techniciens_possedes:
             joueur.techniciens_possedes.remove(self)
             joueur.trigger_ui_update()
+
             if manager:
                 manager.ajouter_notification(f"{self.nom} licencié.")
             return True
+
         if manager:
-            manager.ajouter_notification(f"{self.nom} n'est pas engagé, donc ne peut pas être licencié.")
+            manager.ajouter_notification(
+                f"{self.nom} n'est pas engagé, donc ne peut pas être licencié."
+            )
         return False
 
-
-
-# Liste des techniciens disponibles
-
 technicians = [
-    Technician("Rémy Tourneur", "Mécanique", "Débutant", 200, 1.25, 'images/Tech1.png'),
-    Technician("Jack Soudey", "Mécanique", "Moyen", 300, 1, 'images/Tech2.png'),
-    Technician("Claude Piston", "Mécanique", "Expert", 500, 0.75, 'images/Tech6.png'),
-    Technician("Hubert Volt", "Électrique", "Débutant", 250, 1.25, 'images/Tech3.png'),
-    Technician("Fred Fraiseuse", "Électrique", "Moyen", 350, 1, 'images/Tech5.png'),
-    Technician("Léon Laser", "Électrique", "Expert", 500, 0.75, 'images/Tech9.png'),
-    Technician("Alex Byte", "Informatique", "Débutant", 250, 1.25, 'images/Tech7.png'),
-    Technician("Lucas Pixel", "Informatique", "Moyen", 400, 1, 'images/Tech4.png'),
-    Technician("Dave Data", "Informatique", "Expert", 600, 0.75, 'images/Tech8.png')
+    Technician("Rémy Tourneur", "Mécanique", "Débutant", 800, 1.5, 'images/Tech1.png'),
+    Technician("Jack Soudey", "Mécanique", "Moyen", 1500, 1.2, 'images/Tech2.png'),
+    Technician("Claude Piston", "Mécanique", "Expert", 2500, 1.0, 'images/Tech6.png'),
+    Technician("Hubert Volt", "Électrique", "Débutant", 1000, 1.5, 'images/Tech3.png'),
+    Technician("Fred Fraiseuse", "Électrique", "Moyen", 1800, 1.2, 'images/Tech5.png'),
+    Technician("Léon Laser", "Électrique", "Expert", 3000, 1.0, 'images/Tech9.png'),
+    Technician("Alex Byte", "Informatique", "Débutant", 1200, 1.5, 'images/Tech7.png'),
+    Technician("Lucas Pixel", "Informatique", "Moyen", 2200, 1.2, 'images/Tech4.png'),
+    Technician("Dave Data", "Informatique", "Expert", 4000, 1.0, 'images/Tech8.png')
 ]
-# Dictionnaire pour garder une référence aux boutons d'engagement
+# Dictionnaire global pour les boutons d'engagement
 engagement_buttons = {}
 
-# Classe Joueur pour les tests
-
-
-# Fonction pour mettre à jour la frame des techniciens engagés
 def update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons):
-    # Supprimer les widgets précédents
+    """
+    Met à jour l'affichage des techniciens engagés.
+
+    Args :
+        engaged_frame (CTkFrame) : Cadre contenant les techniciens engagés.
+        joueur (Joueur) : Instance du joueur.
+        argent_label (CTkLabel) : Label pour afficher l'argent du joueur.
+        engagement_buttons (dict) : Boutons d'engagement des techniciens.
+    """
+    # Effacer les widgets existants
     for widget in engaged_frame.winfo_children():
         widget.destroy()
 
-    # Afficher les techniciens engagés
+    # Ajouter un cadre pour chaque technicien engagé
     for idx, technician in enumerate(joueur.techniciens_possedes):
-        # Créer une sous-frame pour chaque technicien engagé
-        tech_frame = ctk.CTkFrame(engaged_frame, width=180, height=150, fg_color="#444444", corner_radius=10)
+        tech_frame = CTkFrame(engaged_frame, width=180, height=150, fg_color="#444444", corner_radius=10)
         tech_frame.grid(row=0, column=idx, padx=10, pady=10)
-
 
         # Image du technicien
         image = Image.open(technician.image_path).resize((60, 60))
         tech_image = ImageTk.PhotoImage(image)
-        image_label = ctk.CTkLabel(tech_frame, text="", image=tech_image)
-        image_label.image = tech_image  # Garde une référence pour éviter que l'image ne soit supprimée
+        image_label = CTkLabel(tech_frame, text="", image=tech_image)
+        image_label.image = tech_image
         image_label.pack(pady=5)
 
         # Nom du technicien
-        name_label = ctk.CTkLabel(tech_frame, text=technician.nom, font=("Arial", 10))
+        name_label = CTkLabel(tech_frame, text=technician.nom, font=("Arial", 10))
         name_label.pack()
 
-
-        # Bouton d'assignation/désassignation
-        assign_button = ctk.CTkButton(tech_frame, font=("Arial", 10))
-
+        # Bouton pour assigner ou désassigner le technicien
+        assign_button = CTkButton(tech_frame, font=("Arial", 10))
         if technician.assigned_machine is None:
-            # Le technicien n'est pas assigné
             assign_button.configure(
                 text="Attribuer",
-                command=lambda tech=technician, btn=assign_button: open_assign_window(tech, joueur, btn))
+                command=lambda tech=technician, btn=assign_button: open_assign_window(tech, joueur, btn)
+            )
         else:
-            # Le technicien est déjà assigné
             assign_button.configure(
                 text="Désaffecter",
                 command=lambda tech=technician, btn=assign_button: tech.unassign_from_machine(btn, joueur)
             )
-
-        # Boutons Attribuer et Licencier
         assign_button.pack(pady=5)
 
+        # Bouton pour licencier le technicien
         def licencier_technicien(tech=technician):
             manager = get_global_notifications_manager()
             if tech in joueur.techniciens_possedes:
+                # Vérifier si le technicien est assigné à une machine en réparation
                 if tech.assigned_machine is not None:
                     if tech.assigned_machine.en_reparation_flag:
                         if manager:
-                            manager.ajouter_notification(f"{tech.nom} ne peut pas être licencié car la machine {tech.assigned_machine.nom} ({tech.assigned_machine.niveau_machine}) est en réparation.")
+                            manager.ajouter_notification(
+                                f"{tech.nom} ne peut pas être licencié car la machine {tech.assigned_machine.nom} ({tech.assigned_machine.niveau_machine}) est en réparation."
+                            )
                         return False
-                    tech.unassign_from_machine(None, None)  # Désassigner de la machine
+                    tech.unassign_from_machine(None, None)
                 joueur.techniciens_possedes.remove(tech)
                 update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons)
-                # Réactiver le bouton d'engagement
                 engagement_buttons[tech].configure(state="normal")
                 if manager:
                     manager.ajouter_notification(f"{tech.nom} licencié.")
-
                 return True
             if manager:
-                manager.ajouter_notification(f"{tech.nom} n'est pas engagé, donc ne peut pas être licencié.")
+                manager.ajouter_notification(
+                    f"{tech.nom} n'est pas engagé, donc ne peut pas être licencié."
+                )
             return False
 
-        fire_button = ctk.CTkButton(tech_frame, text="Licencier", font=("Arial", 10), command=licencier_technicien)
+        fire_button = CTkButton(tech_frame, text="Licencier", font=("Arial", 10), command=licencier_technicien)
         fire_button.pack(pady=5)
-        
 
-# Fonction pour engager un technicien
 def engager_technicien(technicien, joueur, engaged_frame, argent_label, engagement_buttons, button=None):
-    manager = get_global_notifications_manager()
+    """
+    Engage un technicien, soustrait le coût et met à jour l'interface.
 
-    salaire_proportionnel = int(technicien.salaire * 1.5)  # 1.5x salaire pour l'engagement
+    Args :
+        technicien (Technician) : Technicien à engager.
+        joueur (Joueur) : Instance du joueur.
+        engaged_frame (CTkFrame) : Cadre des techniciens engagés.
+        argent_label (CTkLabel) : Label affichant l'argent.
+        engagement_buttons (dict) : Boutons d'engagement.
+        button (CTkButton) : Bouton pour ce technicien (facultatif).
+    """
+    manager = get_global_notifications_manager()
+    salaire_proportionnel = int(technicien.salaire * 1.5)  # Coût d'engagement
+
     if len(joueur.techniciens_possedes) < 6 and technicien not in joueur.techniciens_possedes:
         if joueur.argent >= salaire_proportionnel:
-            joueur.argent -= salaire_proportionnel  # Déduire le salaire ajusté
-            if technicien.engager(joueur):  # Engage le technicien
+            joueur.argent -= salaire_proportionnel
+            if technicien.engager(joueur):
                 joueur.trigger_ui_update()
                 update_engaged_frame(engaged_frame, joueur, argent_label, engagement_buttons)
-                
-                # Désactiver le bouton si présent (contexte normal)
-                if button is not None:
+                if button:
                     button.configure(state="disabled")
-                
                 if manager:
                     manager.ajouter_notification(
                         f"{technicien.nom} engagé pour {salaire_proportionnel} €."
@@ -208,107 +300,65 @@ def engager_technicien(technicien, joueur, engaged_frame, argent_label, engageme
     else:
         if manager:
             manager.ajouter_notification(
-                "Nombre maximum de techniciens atteint ou technicien déjà engagé!"
+                "Nombre maximum de techniciens atteint ou technicien déjà engagé !"
             )
-
 
 def open_assign_window(technician, joueur, assign_button):
-    from .Machines import machines_possedees  # Import local pour éviter les importations circulaires
+    """
+    Ouvre une fenêtre pour assigner un technicien à une machine.
+
+    Args :
+        technician (Technician) : Technicien à assigner.
+        joueur (Joueur) : Instance du joueur.
+        assign_button (CTkButton) : Bouton de gestion d'assignation.
+    """
+    from .Machines import machines_possedees
+
     assign_window = ctk.CTkToplevel()
     assign_window.title("Attribuer un technicien à une machine")
-    assign_window.geometry("400x300+1400+570")  # Taille 400x300, position x=100, y=200
-    assign_window.transient()  # Attache la fenêtre au parent
-    assign_window.grab_set()  # Bloque les interactions avec la fenêtre principale
-    assign_window.focus_force()  # Donne le focus à la fenêtre contextuelle
+    assign_window.geometry("400x300+1400+570")
+    assign_window.transient()
+    assign_window.grab_set()
+    assign_window.focus_force()
 
-    ctk.CTkLabel(assign_window, text=f"Attribuer {technician.nom} à une machine", font=("Arial", 14)).pack(pady=10)
+    CTkLabel(assign_window, text=f"Attribuer {technician.nom} à une machine", font=("Arial", 14)).pack(pady=10)
 
     for machine in machines_possedees:
-        machine_button = ctk.CTkButton(assign_window, text=f"{machine.nom} ({machine.niveau_machine})", command=lambda m=machine: assign_technician_to_machine(technician, m, assign_window, assign_button, joueur, tech_frame=None))
+        machine_button = CTkButton(
+            assign_window,
+            text=f"{machine.nom} ({machine.niveau_machine})",
+            command=lambda m=machine: assign_technician_to_machine(technician, m, assign_window, assign_button, joueur)
+        )
         machine_button.pack(pady=5)
 
-    def assign_technician_to_machine(technician, machine, window, assign_button, joueur, tech_frame):
-        manager = get_global_notifications_manager()
-        if machine.technicien is not None:
-            if manager:
-                manager.ajouter_notification(f"Impossible d'assigner {technician.nom} à la machine {machine.nom} ({machine.niveau_machine}). La machine est déjà occupée.") 
-            return
-        
-        if technician.assign_to_machine(machine, assign_button, joueur, tech_frame):
-            assign_button.configure(
-                text="Désaffecter",
-                command=lambda tech=technician, btn=assign_button: tech.unassign_from_machine(btn, joueur)
+def assign_technician_to_machine(technician, machine, window, assign_button, joueur):
+    """
+    Assigne un technicien à une machine depuis la fenêtre d'attribution.
+
+    Args :
+        technician (Technician) : Technicien à assigner.
+        machine (Machine) : Machine à laquelle le technicien est assigné.
+        window (CTkToplevel) : Fenêtre d'attribution.
+        assign_button (CTkButton) : Bouton de gestion d'assignation.
+        joueur (Joueur) : Instance du joueur.
+    """
+    manager = get_global_notifications_manager()
+
+    if machine.technicien is not None:
+        if manager:
+            manager.ajouter_notification(
+                f"La machine {machine.nom} ({machine.niveau_machine}) est déjà assignée."
             )
-            window.destroy()
-        else:
-            if manager:
-                manager.ajouter_notification(f"Impossible d'assigner {technician.nom} à la machine {machine.nom} ({machine.niveau_machine}).")
-            
+        return
 
-
-class Joueur:
-    def __init__(self, argent):
-        self.argent = argent
-        self.techniciens_possedes = []
-if __name__ == "__main__":
-    root = ctk.CTk()
-    root.geometry("1380x800")
-
-
-    joueur = Joueur(argent=1000)
-
-    # Création d'un cadre pour les techniciens dans l'interface principale
-    techniciens_frame = ctk.CTkFrame(root, width=1380, height=300)
-    techniciens_frame.place(x=0, y=0)
-
-    argent_label = ctk.CTkLabel(root, text=f"Argent : {joueur.argent} €", font=("Arial", 14))
-    argent_label.place(x=10, y=310)
-
-    engagement_buttons = {}
-
-    for idx, technician in enumerate(technicians):
-        tech_frame = ctk.CTkFrame(techniciens_frame, width=180, height=150, fg_color="#444444", corner_radius=10)
-        tech_frame.grid(row=0, column=idx, padx=10, pady=10)
-
-        # Image du technicien
-        image = Image.open(technician.image_path).resize((60, 60))
-        tech_image = ImageTk.PhotoImage(image)
-        image_label = ctk.CTkLabel(tech_frame, text="", image=tech_image)
-        image_label.image = tech_image  # Garde une référence pour éviter que l'image ne soit supprimée
-        image_label.pack(pady=5)
-
-        # Nom du technicien
-        name_label = ctk.CTkLabel(tech_frame, text=technician.nom, font=("Arial", 10))
-        name_label.pack()
-
-        # Bouton d'action (Engager)
-        action_button = ctk.CTkButton(tech_frame, text="Engager")
-        action_button.pack(pady=5)
-
-        # Ajouter le bouton au dictionnaire pour pouvoir le réactiver plus tard
-        engagement_buttons[technician] = action_button
-
-        # Fonction pour engager le technicien
-        def engager_technicien(tech=technician, button=action_button):
-            manager = get_global_notifications_manager()
-            if len(joueur.techniciens_possedes) < 6 and tech not in joueur.techniciens_possedes:  # Maximum de 6 techniciens et empêcher double engagement
-                if tech.engager(joueur):
-                    argent_label.configure(text=f"Argent : {joueur.argent} €")
-                    update_engaged_frame(techniciens_frame, joueur, argent_label, engagement_buttons)  # Mettre à jour la frame des techniciens engagés
-                    button.configure(state="disabled")  # Désactiver le bouton après engagement
-            else:
-                if manager:
-                    manager.ajouter_notification("Nombre maximum de techniciens atteint ou technicien déjà engagé!")
-    
-
-
-        # Assigner la fonction d'engagement au bouton
-        action_button.configure(command=lambda t=technician, b=action_button: engager_technicien(t, b))
-
-    root.mainloop()
-
-
-
-
-
-
+    if technician.assign_to_machine(machine, assign_button, joueur, tech_frame=None):
+        assign_button.configure(
+            text="Désaffecter",
+            command=lambda tech=technician, btn=assign_button: tech.unassign_from_machine(btn, joueur)
+        )
+        window.destroy()
+    else:
+        if manager:
+            manager.ajouter_notification(
+                f"Impossible d'assigner {technician.nom} à la machine {machine.nom} ({machine.niveau_machine})."
+            )

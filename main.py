@@ -1,138 +1,258 @@
-import customtkinter as ctk
-from customtkinter import CTkImage
-from PIL import Image
-from modules.Machines import Machine, machines_disponibles,machines_possedees, InterfaceGraphique, acheter_machine
-from modules.Technician import Technician, technicians, engagement_buttons, update_engaged_frame, engager_technicien
-from modules.Joueur import Joueur, creer_labels_profil
-import json
-import tkinter.messagebox as messagebox
-import customtkinter as ctk
+"""
+Fichier principal pour Repair Rush.
+Ce script gère l'initialisation de l'application, l'affichage de l'interface utilisateur et les interactions globales.
+"""
+
+# --- Importations des bibliothèques et modules nécessaires ---
 import os
+import json
+import customtkinter as ctk
+import tkinter.messagebox as messagebox
 from PIL import Image, ImageTk
-# import sound_manager
+from customtkinter import CTkImage
 
-ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("blue")
+# Importation des modules spécifiques au jeu
+from modules.Machines import machines_disponibles, machines_possedees, InterfaceGraphique, acheter_machine
+from modules.Technician import technicians, engagement_buttons, update_engaged_frame, engager_technicien
+from modules.Joueur import Joueur, creer_labels_profil
+from modules.sound_manager import SoundManager
 
-player_data = {}
-selected_currency = "€"
+# --- Configuration initiale de l'application ---
+# Initialisation du gestionnaire de son
+sound_manager = SoundManager()
 
-# Fenêtre principale
+# Configuration globale de l'apparence
+ctk.set_appearance_mode("dark")  # Mode sombre par défaut
+ctk.set_default_color_theme("blue")  # Thème couleur par défaut
+
+# Définition des variables globales
+player_data = {}  # Stockage des données du joueur
+selected_currency = "€" # Devise sélectionnée par défaut
+SAVE_FILE = "save/Save.json" # Fichier de sauvegarde
+
+# --- Initialisation de la fenêtre principale ---
 root = ctk.CTk()
 root.title("Repair Rush")
-root.after(100, lambda: root.state('zoomed'))
+root.after(100, lambda: root.state('zoomed'))  # Agrandit la fenêtre après 100 ms
 
-# Créer les frames
+# --- Création des cadres pour gérer différentes sections de l'interface ---
 frames = {}
-for frame_name in ["menu_principal", "parametres","accueil", "choix_partie", "nom_joueur", "photo_profil"]:
+for frame_name in ["menu_principal", "parametres", "accueil", "choix_partie", "nom_joueur", "photo_profil"]:
     frame = ctk.CTkFrame(root)
-    frame.place(relwidth=1, relheight=1)
+    frame.place(relwidth=1, relheight=1)  # Chaque frame occupe tout l'espace
     frames[frame_name] = frame
 
 def creer_ecran_accueil():
-    frame = frames["accueil"]
-    frame.lift()
+
+    """
+    Crée et affiche l'écran d'accueil du jeu.
+
+    Cette fonction initialise l'écran d'accueil avec un fond d'écran, un titre,
+    et des boutons pour commencer une partie ou quitter le jeu.
+
+    Exceptions:
+        FileNotFoundError: Si l'image de fond n'est pas trouvée, un message
+        d'erreur est affiché dans la console.
+    """
+    frame = frames["accueil"]  # Récupère le cadre associé à l'accueil
+    frame.lift()  # Amène ce cadre au premier plan
     for widget in frame.winfo_children():
-        widget.destroy()
+        widget.destroy()  # Supprime tous les widgets existants pour éviter les doublons
 
-    # Fond d'écran
+    # Ajout d'un fond d'écran
     try:
-        bg_image = CTkImage(light_image=Image.open("images/Backg.jpg"), size=(root.winfo_screenwidth(), root.winfo_screenheight()))
-        background_label = ctk.CTkLabel(frame, image=bg_image, text="")
-        background_label.place(relwidth=1, relheight=1)
+        bg_image = CTkImage(
+            light_image=Image.open("images/Backg.jpg"),  # Charge l'image de fond
+            size=(root.winfo_screenwidth(), root.winfo_screenheight())  # Adapte la taille au plein écran
+        )
+        background_label = ctk.CTkLabel(frame, image=bg_image, text="")  # Crée un label avec l'image
+        background_label.place(relwidth=1, relheight=1)  # Étire l'image pour couvrir tout le cadre
     except FileNotFoundError:
-        print("Erreur : L'image de fond n'a pas été trouvée.")
+        print("Erreur : L'image de fond n'a pas été trouvée.")  # Log l'erreur si le fichier est introuvable
 
-    # Titre et boutons
-    title_label = ctk.CTkLabel(frame, text="Repair Rush", font=("Arial", 50, "bold"))
-    title_label.pack(pady=100)
-    play_button = ctk.CTkButton(frame, text="Jouer", command=creer_ecran_choix_partie, font=("Arial", 20), width=300)
-    play_button.pack(pady=20)
-    quit_button = ctk.CTkButton(frame, text="Quitter", command=root.quit, font=("Arial", 20), width=300)
-    quit_button.pack(pady=20)
+    # Titre du jeu
+    title_label = ctk.CTkLabel(
+        frame, 
+        text="Repair Rush", 
+        font=("Arial", 50, "bold")  # Style du titre
+    )
+    title_label.pack(pady=100)  # Ajoute un espace vertical autour du titre
 
+    # Bouton pour commencer une partie
+    play_button = ctk.CTkButton(
+        frame, 
+        text="Jouer", 
+        command=creer_ecran_choix_partie,  # Redirige vers l'écran de choix de partie
+        font=("Arial", 20), 
+        width=300
+    )
+    play_button.pack(pady=20)  # Ajoute un espace vertical autour du bouton
+
+    # Bouton pour quitter le jeu
+    quit_button = ctk.CTkButton(
+        frame, 
+        text="Quitter", 
+        command=root.quit,  # Ferme l'application
+        font=("Arial", 20), 
+        width=300
+    )
+    quit_button.pack(pady=20)  # Ajoute un espace vertical autour du bouton
 
 def creer_ecran_choix_partie():
-    frame = frames["choix_partie"]
-    frame.lift()
+
+    """
+    Crée et affiche l'écran de sélection de partie.
+
+    Cet écran permet au joueur de choisir entre démarrer une nouvelle partie,
+    charger une partie sauvegardée ou revenir à l'écran d'accueil.
+
+    Exceptions:
+        FileNotFoundError: Si l'image de fond est introuvable, affiche un message d'erreur dans la console.
+    """
+    frame = frames["choix_partie"]  # Récupère le cadre associé à l'écran de choix de partie
+    frame.lift()  # Amène ce cadre au premier plan
+
+    # Supprime les widgets existants dans le cadre
     for widget in frame.winfo_children():
         widget.destroy()
 
-    # Fond d'écran
+    # Ajout d'un fond d'écran
     try:
-        bg_image = CTkImage(light_image=Image.open("images/Backg.jpg"), size=(root.winfo_screenwidth(), root.winfo_screenheight()))
+        bg_image = CTkImage(
+            light_image=Image.open("images/Backg.jpg"),  # Charge l'image de fond
+            size=(root.winfo_screenwidth(), root.winfo_screenheight())  # Adapte à la taille de l'écran
+        )
         background_label = ctk.CTkLabel(frame, image=bg_image, text="")
-        background_label.place(relwidth=1, relheight=1)
+        background_label.place(relwidth=1, relheight=1)  # Étend l'image sur tout le cadre
     except FileNotFoundError:
-        print("Erreur : L'image de fond n'a pas été trouvée.")
+        print("Erreur : L'image de fond n'a pas été trouvée.")  # Log l'erreur
 
     # Titre
-    title_label = ctk.CTkLabel(frame, text="Repair Rush", font=("Arial", 50, "bold"))
-    title_label.place(relx=0.5, y=100, anchor="center")
+    title_label = ctk.CTkLabel(
+        frame,
+        text="Repair Rush",
+        font=("Arial", 50, "bold")  # Police stylisée pour le titre
+    )
+    title_label.place(relx=0.5, y=100, anchor="center")  # Centre le titre horizontalement
 
-    # Boutons
+    # Bouton pour une nouvelle partie
     new_game_button = ctk.CTkButton(
-        frame, text="Nouvelle Partie", command=demander_nom,
-        font=("Arial", 20), width=300
+        frame,
+        text="Nouvelle Partie",
+        command=demander_nom,  # Redirige vers la fonction pour demander un nom
+        font=("Arial", 20),
+        width=300
     )
-    new_game_button.place(relx=0.5, y=200, anchor="center")
+    new_game_button.place(relx=0.5, y=200, anchor="center")  # Centre le bouton sous le titre
 
+    # Bouton pour charger une partie
     load_game_button = ctk.CTkButton(
-        frame, text="Charger Partie", command=charger_partie,
-        font=("Arial", 20), width=300,
-        state="normal" if verifier_sauvegarde() else "disabled"
+        frame,
+        text="Charger Partie",
+        command=charger_partie,  # Charge une partie sauvegardée
+        font=("Arial", 20),
+        width=300,
+        state="normal" if verifier_sauvegarde() else "disabled"  # Désactive si aucune sauvegarde n'existe
     )
-    load_game_button.place(relx=0.5, y=250, anchor="center")
+    load_game_button.place(relx=0.5, y=250, anchor="center")  # Centre le bouton sous celui de nouvelle partie
 
+    # Bouton pour revenir à l'écran d'accueil
     back_button = ctk.CTkButton(
-        frame, text="Retour", command=creer_ecran_accueil,
-        font=("Arial", 20), width=300
+        frame,
+        text="Retour",
+        command=creer_ecran_accueil,  # Redirige vers l'écran d'accueil
+        font=("Arial", 20),
+        width=300
     )
-    back_button.place(relx=0.5, y=300, anchor="center")
-
+    back_button.place(relx=0.5, y=300, anchor="center")  # Centre le bouton sous celui de chargement
 
 def demander_nom():
-    frame = frames["nom_joueur"]
-    frame.lift()
+    """
+    Affiche l'écran pour saisir le nom du joueur et le nom de l'entreprise.
+
+    Cette fonction demande au joueur de saisir son nom et le nom de son entreprise,
+    puis valide les entrées avant de passer à l'étape suivante.
+
+    Exceptions:
+        - Affiche un message d'erreur si les noms fournis ne respectent pas les critères.
+    """
+    frame = frames["nom_joueur"]  # Accède au cadre dédié à cette étape
+    frame.lift()  # Amène ce cadre au premier plan
+
+    # Nettoyage des widgets existants
     for widget in frame.winfo_children():
         widget.destroy()
 
+    # Champ pour le nom du joueur
     ctk.CTkLabel(frame, text="Entrez votre nom :", font=("Arial", 20)).pack(pady=20)
     nom_entry = ctk.CTkEntry(frame)
     nom_entry.pack(pady=10)
 
+    # Champ pour le nom de l'entreprise
     ctk.CTkLabel(frame, text="Nom de l'entreprise :", font=("Arial", 20)).pack(pady=20)
     entreprise_entry = ctk.CTkEntry(frame)
     entreprise_entry.pack(pady=10)
 
+    # Zone pour afficher les erreurs
     error_label = ctk.CTkLabel(frame, text="", font=("Arial", 12), text_color="red")
     error_label.pack(pady=5)
 
+    # Fonction de validation des entrées
     def valider_nom():
-        nom = nom_entry.get().strip()
+        """
+        Valide les noms saisis et passe à l'écran de choix de la photo de profil si valides.
+
+        Critères:
+        - Les noms doivent contenir au moins 3 caractères.
+        """
+        nom = nom_entry.get().strip()  # Supprime les espaces inutiles
         entreprise = entreprise_entry.get().strip()
-        if len(nom) < 3 or len(entreprise) < 3:
+        if len(nom) < 3 or len(entreprise) < 3:  # Vérifie la longueur minimale
             error_label.configure(text="Nom et entreprise doivent avoir au moins 3 caractères.")
         else:
+            # Enregistre les données du joueur et passe à l'étape suivante
             player_data["nom"] = nom
             player_data["entreprise"] = entreprise
             choisir_photo_profil()
 
-    ctk.CTkButton(frame, text="Suivant", command=valider_nom, font=("Arial", 20)).pack(pady=20)
-
+    # Bouton pour valider et passer à l'étape suivante
+    ctk.CTkButton(frame,text="Suivant",command=valider_nom,font=("Arial", 20)).pack(pady=20)
 
 def choisir_photo_profil():
-    frame = frames["photo_profil"]
-    frame.lift()
+    """
+    Affiche l'écran pour choisir une photo de profil.
+
+    Permet au joueur de sélectionner une image parmi une liste d'options
+    prédéfinies. Une fois la photo choisie, le joueur est redirigé vers le
+    tutoriel avec son profil créé.
+
+    Exceptions:
+        - Affiche un message d'erreur si une image n'est pas trouvée.
+    """
+    frame = frames["photo_profil"]  # Cadre dédié à la sélection de la photo
+    frame.lift()  # Amène ce cadre au premier plan
+
+    # Nettoyage des widgets existants
     for widget in frame.winfo_children():
         widget.destroy()
 
+    # Titre
     ctk.CTkLabel(frame, text="Choisissez une photo de profil :", font=("Arial", 20)).pack(pady=10)
+
+    # Liste des chemins vers les images de profil disponibles
     images = [f"images/Profil{i}.png" for i in range(1, 7)]
+
+    # Cadre pour afficher les images
     img_frame = ctk.CTkFrame(frame)
     img_frame.pack(pady=20)
 
     def selectionner_photo(path):
+        """
+        Enregistre la photo sélectionnée et crée le profil du joueur.
+
+        Args:
+            path (str): Chemin de l'image sélectionnée.
+        """
         player_data["photo"] = path
         joueur = Joueur(
             nom=player_data["nom"],
@@ -140,21 +260,36 @@ def choisir_photo_profil():
             photo=path
         )
         print(f"Profil créé : {joueur.nom} ({joueur.entreprise}), photo sélectionnée : {path}")
-        lancer_tutoriel(joueur)
+        lancer_tutoriel(joueur)  # Passe à l'étape suivante (tutoriel)
 
+    # Génère les boutons d'images
     for img_path in images:
         try:
+            # Charge l'image et crée un bouton associé
             img = CTkImage(light_image=Image.open(img_path), size=(100, 100))
-            btn = ctk.CTkButton(img_frame, image=img, text="", command=lambda path=img_path: selectionner_photo(path))
+            btn = ctk.CTkButton(
+                img_frame,
+                image=img,
+                text="",
+                command=lambda path=img_path: selectionner_photo(path)
+            )
             btn.pack(side="left", padx=10)
         except FileNotFoundError:
+            # Gestion des erreurs pour les images manquantes
             print(f"Erreur : L'image {img_path} est introuvable.")
 
-
 def lancer_tutoriel(joueur):
+    """
+    Affiche le tutoriel pour guider le joueur après la création de son profil.
+
+    Args:
+        joueur (Joueur): L'instance du joueur contenant ses informations (nom, entreprise, etc.).
+    """
+    # Création du cadre principal pour le tutoriel
     tutoriel_frame = ctk.CTkFrame(root, width=1500, height=900, fg_color="#E8C36A")
     tutoriel_frame.place(relwidth=1, relheight=1)
 
+    # Titre de bienvenue
     titre_label = ctk.CTkLabel(
         tutoriel_frame,
         text=f"Bienvenue, {joueur.nom} !",
@@ -163,6 +298,7 @@ def lancer_tutoriel(joueur):
     )
     titre_label.pack(pady=20)
 
+    # Introduction du tutoriel
     intro_label = ctk.CTkLabel(
         tutoriel_frame,
         text=(
@@ -177,6 +313,7 @@ def lancer_tutoriel(joueur):
     )
     intro_label.pack(pady=20)
 
+    # Liste des étapes du tutoriel
     étapes = [
         "1. Gardez vos machines dans le vert pour un rendement optimal.",
         "2. Engagez des techniciens et attribuez-les aux machines en panne.",
@@ -194,7 +331,11 @@ def lancer_tutoriel(joueur):
     )
     étapes_label.pack(pady=20)
 
+    # Bouton pour lancer le jeu
     def lancer_jeu():
+        """
+        Détruit le tutoriel et charge l'interface principale du jeu.
+        """
         tutoriel_frame.destroy()
         creer_interface_jeu()
 
@@ -207,7 +348,6 @@ def lancer_tutoriel(joueur):
     bouton_continuer.pack(pady=30)
 
     print(f"Tutoriel lancé pour le joueur {joueur.nom} ({joueur.entreprise}).")
-
 
 def creer_interface_jeu():
     #region Créer les différents frames
@@ -308,7 +448,7 @@ def creer_interface_jeu():
             joueur.ajouter_revenu()
             Endgame()
             
-            sound_manager.play_effect("sounds/ca-ching.mp3")  # Jouer le son de gain d'argent
+            sound_manager.playsound("sounds/ca-ching.mp3")  # Jouer le son de gain d'argent
 
     def Endgame():
         if joueur.jour_actuel == 20:
@@ -420,9 +560,16 @@ def creer_interface_jeu():
 
             # Bouton pour acheter la machine
             
-            buy_button = ctk.CTkButton(scrollable_frame,text=f"{machine.cout_achat} {selected_currency}",width=150,command=lambda mach=machine: acheter_machine(mach, joueur, interface_machines, update_scrollable_frame))
-
+            buy_button = ctk.CTkButton(
+            scrollable_frame,
+            text=f"{machine.cout_achat} {selected_currency}",
+            width=150,
+            state="disabled" if any(m.en_reparation_flag for m in joueur.machines_possedees) else "normal",  # Vérification des réparations
+            command=lambda mach=machine: acheter_machine(mach, joueur, interface_machines, update_scrollable_frame)
+            )
             buy_button.grid(row=row_offset + j * 2 + 2, column=5, padx=10, pady=5)
+    
+                
 
     # Fonction pour afficher les techniciens
     def afficher_techniciens():
@@ -478,7 +625,7 @@ def creer_interface_jeu():
 
     #region --- NOTIFICATIONS ---
     # Notifications pour les actions du joueur
-    from NotificationsManager import NotificationsManager, set_global_notifications_manager
+    from modules.NotificationsManager import NotificationsManager, set_global_notifications_manager
 
     notifications_manager = NotificationsManager(frames["menu_principal"], x=1400, y=50, width=450, height=500)
     set_global_notifications_manager(notifications_manager)
@@ -506,17 +653,8 @@ def creer_interface_jeu():
 
 
     #endregion
-    # Fonction pour afficher les techniciens
+  
 
-    #region --- PARAMÈTRES ---
-    # Boutons pour les différentes sections des options (Partie, Son, Profil)
-
-    # Position des boutons dans le frame des paramètres
-
-    #endregion
-    #region --- PAGE PARTIE ---
-
-    # Page unique pour toutes les fonctionnalités
 
 
     # --- Section Profil ---
@@ -586,60 +724,66 @@ def creer_interface_jeu():
     save_button = ctk.CTkButton(frames["parametres"], text="Sauvegarder",command=sauvegarder_partie)
     save_button.place(x=50, y=200)
 
-    # --- Section Son ---
-    sound_label = ctk.CTkLabel(frames["parametres"], text="Son", font=("Arial", 20, "bold"),text_color="black")
+    sound_label = ctk.CTkLabel(frames["parametres"], text="Son", font=("Arial", 20, "bold"), text_color="black")
     sound_label.place(x=50, y=280)
 
-    sound_label = ctk.CTkLabel(frames["parametres"], text="Son",text_color="black")
-    sound_label.place(x=50, y=320)
+    # Définit un volume par défaut (50%)
+    DEFAULT_VOLUME = 50
+
+    # Fonction pour mettre à jour le volume
+    def update_volume(value):
+        """Mets à jour le volume et synchronise l'état de la case à cocher."""
+        sound_manager.setvolume(value)
+        if value > 0:
+            music_enabled_var.set(True)  # Active la musique si le volume est supérieur à 0
+        else:
+            music_enabled_var.set(False)  # Désactive la musique si le volume est à 0
+
+    # Slider pour le volume
     sound_slider = ctk.CTkSlider(
         frames["parametres"],
         from_=0,  # Volume minimum
         to=100,  # Volume maximum
-        command=lambda value: sound_manager.setvolume(int(value))  # Appelle setvolume avec la valeur du slider
+        command=lambda value: update_volume(int(value))  # Appelle une fonction pour gérer le volume
     )
     sound_slider.place(x=150, y=320)
-    #region --- BOUTONS DE SON ---
+
     music_enabled_var = ctk.BooleanVar(value=True)  # Musique activée par défaut
 
     # Fonction pour activer/désactiver la musique
-    def toggle_music(sound_manager, music_var):
+    def toggle_music():
         """Active ou désactive la musique selon l'état de la case à cocher."""
-        if music_var.get():  # Si la case est cochée
-            current_volume = sound_manager.getvolume()
-            if current_volume == 0:  # Si le volume est à 0, remets un volume par défaut
-                sound_manager.setvolume(50)  # Remets le volume à 50%
-            sound_manager.resumemusic()  # Reprends la musique si elle est en pause
-        else:  # Si la case est décochée
-            sound_manager.setvolume(0)  # Mets le volume à 0 pour couper la musique
+        if music_enabled_var.get():  # Si la musique est activée
+            current_volume = int(sound_slider.get())  # Récupère la position du slider
+            sound_manager.setvolume(current_volume)  # Utilise le volume du slider
+            sound_manager.resumemusic()  # Reprend la musique si elle était en pause
+            sound_slider.configure(state="normal")  # Réactive le slider
+        else:  # Si la musique est désactivée
+            sound_manager.setvolume(0)  # Coupe le son
+            sound_slider.configure(state="disabled")  # Désactive le slider
 
-    # Initialisation pour synchroniser la case avec l'état réel de la musique
-    if sound_manager.getvolume() == 0:
-        music_enabled_var.set(False)
-    else:
-        music_enabled_var.set(True)
-
-    # Ajout de la case à cocher dans les paramètres
+    # Ajout de la case à cocher pour la musique
     music_toggle_checkbox = ctk.CTkCheckBox(
         frames["parametres"],
         text="🎵 Activer la musique",
         variable=music_enabled_var,
         onvalue=True,
         offvalue=False,
-        command=lambda: toggle_music(sound_manager, music_enabled_var)
+        command=toggle_music  # Appelle toggle_music lorsqu'elle est cliquée
     )
     music_toggle_checkbox.place(x=150, y=420)
-    #endregion
-    # Synchroniser la position initiale du slider avec le volume actuel
-    current_volume = sound_manager.getvolume()  # Récupère le volume actuel
-    sound_slider.set(current_volume) 
+
+    # Initialiser le slider et la case à cocher
+    sound_slider.set(DEFAULT_VOLUME)  # Définit le slider à la moitié (50%)
+    sound_manager.setvolume(DEFAULT_VOLUME)  # Définit également le volume du sound manager  
+
 
 
     # --- Bouton Retour ---
     back_button = ctk.CTkButton(frames["parametres"], text="← Menu Principal", width=200, command=lambda: afficher_frame(frames["menu_principal"]))
     back_button.place(x=800, y=20)
 
-    #endregion
+
 
     #region --- INTERFACE DES MACHINES ---
     interface_machines = InterfaceGraphique(machines_frame, machines_possedees)
@@ -657,74 +801,93 @@ def creer_interface_jeu():
     except FileNotFoundError:
         return False
 
-
-SAVE_FILE = "save/Save.json"
-current_step = 0
-tutorial_steps = [
-    {"text": "Bienvenue dans Repair Rush !", "color": "yellow"},
-    {"text": "Votre but est de gérer des machines et techniciens pour maximiser vos profits.", "color": "orange"},
-    {"text": "Planifiez, entretenez et réparez vos machines avant qu'elles ne tombent en panne !", "color": "red"}
-]
-
-
-# Vérifier sauvegarde
+# Vérifier si une sauvegarde existe
 def verifier_sauvegarde():
+    """
+    Vérifie si le fichier de sauvegarde existe.
+
+    Returns:
+        bool: True si le fichier de sauvegarde existe, False sinon.
+    """
     try:
         with open(SAVE_FILE, "rb"):
             return True
     except FileNotFoundError:
         return False
 
-# Sauvegarder les données
+
+# Sauvegarder les données du joueur et de l'état du jeu
 def sauvegarder_partie():
+    """
+    Sauvegarde l'état actuel de la partie dans un fichier JSON.
+
+    Cette fonction enregistre les informations du joueur, les machines possédées,
+    les techniciens engagés, ainsi que d'autres données importantes.
+
+    Raises:
+        Exception: En cas d'erreur pendant la sauvegarde, une exception est levée et affichée.
+    """
     try:
-        # Vérifier et créer le dossier de sauvegarde si nécessaire
+        # Vérifie et crée le dossier de sauvegarde si nécessaire
         save_dir = os.path.dirname(SAVE_FILE)
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        # Sauvegarder les noms et niveaux des machines possédées
-        possessed_machines = [{"nom": machine.nom, "niveau": machine.niveau_machine} for machine in joueur.machines_possedees]
-        # Sauvegarder les noms des techniciens possédés
+        # Prépare les données des machines possédées
+        possessed_machines = [
+            {"nom": machine.nom, "niveau": machine.niveau_machine}
+            for machine in joueur.machines_possedees
+        ]
+
+        # Prépare les données des techniciens engagés
         possessed_technicians = [technician.nom for technician in joueur.techniciens_possedes]
 
-        # Préparer les données à sauvegarder
+        # Structure des données à sauvegarder
         data = {
-            "player_data": player_data,
-            "machines_possedees": possessed_machines,
-            "techniciens_possedes": possessed_technicians,
-            "joueur": {
+            "player_data": player_data,  # Données générales du joueur
+            "machines_possedees": possessed_machines,  # Machines possédées avec leurs niveaux
+            "techniciens_possedes": possessed_technicians,  # Techniciens engagés
+            "joueur": {  # Informations détaillées sur le joueur
                 "nom": joueur.nom,
                 "entreprise": joueur.entreprise,
                 "photo": joueur.photo,
                 "argent": joueur.argent,
-                "jour_actuel": joueur.jour_actuel
-            }
+                "jour_actuel": joueur.jour_actuel,
+            },
         }
-        print("Machines possédées :", possessed_machines)
 
-        # Sauvegarder les données au format JSON
+        # Sauvegarde des données dans un fichier JSON
         with open(SAVE_FILE, "w") as f:
             json.dump(data, f, indent=4)
 
         print("Données sauvegardées avec succès en JSON.")
         messagebox.showinfo("Sauvegarde", "Données sauvegardées avec succès.")
     except Exception as e:
+        # Gestion des erreurs pendant la sauvegarde
         print(f"Erreur lors de la sauvegarde des données : {e}")
         messagebox.showerror("Erreur", f"Erreur lors de la sauvegarde des données : {e}")
+
+# Dictionnaire pour stocker les labels du profil
 labels_profil = {
     "argent": None
 }
-class FakeProgressBar:
-    """Barre de progression factice pour simuler une journée complète."""
-    def get(self):
-        return 1.0  # Retourne toujours une progression complète
-fake_progress_bar = FakeProgressBar()
+
 def charger_partie():
+    """
+    Charge une partie sauvegardée depuis un fichier JSON.
+
+    Cette fonction restaure l'état du joueur, les machines possédées,
+    les techniciens engagés et réinitialise les interfaces associées.
+
+    Raises:
+        Exception: En cas de problème lors du chargement des données.
+    """
     try:
+        # Charger les données depuis le fichier de sauvegarde
         with open(SAVE_FILE, "r") as f:
             data = json.load(f)
 
+        # Rendre accessibles les variables globales nécessaires
         global player_data, joueur, machines_possedees, technicians, frames, labels_profil, engagement_buttons
 
         # Restaurer les données du joueur
@@ -733,18 +896,17 @@ def charger_partie():
             nom=data["joueur"]["nom"],
             entreprise=data["joueur"]["entreprise"],
             photo=data["joueur"]["photo"],
-            argent=data["joueur"]["argent"],
+            argent=data["joueur"]["argent"]
         )
 
-        # Initialiser le frame pour les machines
+        # Initialiser le frame pour afficher les machines
         machines_frame = ctk.CTkFrame(frames["menu_principal"], width=1380, height=300)
         machines_frame.place(x=10, y=760)
 
-        # Restaurer les machines possédées
+        # Restaurer les machines possédées par le joueur
         for m in data["machines_possedees"]:
             machine = next(
                 (mach for mach in machines_disponibles if mach.nom == m["nom"] and mach.niveau_machine == m["niveau"]),
-
                 None
             )
             if machine:
@@ -757,27 +919,27 @@ def charger_partie():
 
         # Initialiser le frame pour les techniciens engagés
         engaged_frame = ctk.CTkFrame(frames["menu_principal"], width=1160, height=200, fg_color="#333333")
-        
 
-        # Restaurer les techniciens possédés
-        creer_interface_jeu()
+        # Restaurer les techniciens engagés
+        creer_interface_jeu()  # Réinitialiser l'interface du jeu
         joueur.argent = data["joueur"]["argent"]
         joueur.jour_actuel = data["joueur"]["jour_actuel"]
+
         for nom in data["techniciens_possedes"]:
             technician = next((tech for tech in technicians if tech.nom == nom), None)
             if technician:
-                # Engage directement le technicien (sans bouton)
+                # Engage directement le technicien sans bouton
                 technician.engager(joueur)
                 print(f"Technicien restauré et engagé : {technician.nom}")
             else:
                 print(f"Technicien non trouvé : {nom}")
 
-        # Après avoir restauré les techniciens, force la réinitialisation de la frame
-        engaged_frame.destroy()  # Supprime le cadre existant
+        # Réinitialisation de l'affichage des techniciens
+        engaged_frame.destroy()  # Supprime l'ancien cadre
         engaged_frame = ctk.CTkFrame(frames["menu_principal"], width=1160, height=200, fg_color="#333333")
         engaged_frame.place(x=10, y=500)
 
-        # Réinitialise l'affichage des techniciens
+        # Met à jour l'interface des techniciens
         update_engaged_frame(
             engaged_frame=engaged_frame,
             joueur=joueur,
@@ -786,19 +948,14 @@ def charger_partie():
         )
         print("Engaged frame réinitialisé.")
 
+        # Confirmation du succès du chargement
         print("Partie chargée avec succès.")
         messagebox.showinfo("Chargement", "Partie chargée avec succès.")
 
     except Exception as e:
+        # Gestion des erreurs lors du chargement
         print(f"Erreur lors du chargement des données : {e}")
         messagebox.showerror("Erreur", f"Erreur lors du chargement des données : {e}")
-
-
-
-
-
-
-
 
 # Lancer l'écran d'accueil
 creer_ecran_accueil()
